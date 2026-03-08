@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import FileUploader from "../input/FileUploader";
+import UrlInput from "../input/UrlInput";
 import PathInput from "../input/PathInput";
 import ChatInput from "../input/ChatInput";
 import ThemeToggle from "../shared/ThemeToggle";
-import { uploadFiles, analyzePath, analyzeText } from "@/lib/api";
+import { uploadFiles, analyzeUrl, analyzePath, analyzeText } from "@/lib/api";
 import { AnalysisResponse } from "@/lib/types";
 
 interface LeftPanelProps {
@@ -46,6 +47,20 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
     }
   };
 
+  const handleUrl = async (url: string) => {
+    setIsLoading(true);
+    onError("");
+    try {
+      const result = await analyzeUrl(url, instructions);
+      onResult(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to analyze URL";
+      onError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleText = async (text: string) => {
     setIsLoading(true);
     onError("");
@@ -66,7 +81,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
         <div>
           <h1 className="text-xl font-bold text-slate-800 dark:text-white">Knowledge OS</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Upload documents, provide a path, or paste text
+            Upload documents, fetch from URL, or paste text
           </p>
         </div>
         <ThemeToggle />
@@ -112,6 +127,10 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
       </div>
 
       <FileUploader onSubmit={handleFiles} isLoading={isLoading} />
+
+      <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+        <UrlInput onSubmit={handleUrl} isLoading={isLoading} />
+      </div>
 
       <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
         <PathInput onSubmit={handlePath} isLoading={isLoading} />

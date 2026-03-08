@@ -2,7 +2,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
 from app.services.claude_service import analyze_content
-from app.schemas.responses import AnalysisResponse, FileMetadata, PathRequest, TextRequest
+from app.services.url_service import download_file
+from app.schemas.responses import AnalysisResponse, FileMetadata, PathRequest, TextRequest, UrlRequest
 
 router = APIRouter()
 
@@ -80,4 +81,57 @@ async def analyze_text(request: TextRequest):
         metadata=[],
         files_processed=0,
         total_text_length=len(request.text),
+    )
+
+
+@router.post("/api/analyze-url", response_model=AnalysisResponse)
+async def analyze_url(request: UrlRequest):
+    if not request.url.strip():
+        raise HTTPException(400, "URL cannot be empty")
+
+    # Download the file from the URL
+    try:
+        file_bytes, filename = await download_file(request.url)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(
+            500,
+            f"Failed to download file: {str(e)}. "
+            "Make sure the URL is accessible and the file is shared publicly.",
+        )
+
+    # Process the downloaded file
+    try:
+        processor = get_processor(filename)
+    except ValueError:
+        raise HTTPException(
+            400,
+            f"Could not determine file type for '{filename}'. "
+            f"Supported formats: {', '.join(SUPPORTED_EXTENSIONS)}. "
+            "Try downloading the file and uploading it directly.",
+        )
+
+    result = await processor.extract(file_bytes, filename)
+
+    metadata = FileMetadata(
+        filename=filename,
+        paragraph_count=result.metadata.get("paragraph_count", 0),
+        page_count=result.metadata.get("page_count", 0),
+        sheet_count=result.metadata.get("sheet_count", 0),
+        slide_count=result.metadata.get("slide_count", 0),
+    )
+
+    combined_text = f"--- {filename} (from URL) ---\n{result.text}"
+
+    if not combined_text.strip():
+        raise HTTPException(400, "No text could be extracted from the downloaded file")
+
+    analysis = await analyze_content(combined_text, result.tables, request.instructions)
+
+    return AnalysisResponse(
+        analysis=analysis,
+        metadata=[metadata],
+        files_processed=1,
+        total_text_length=len(combined_text),
     )

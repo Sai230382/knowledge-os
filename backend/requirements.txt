@@ -8,3 +8,4 @@ pdfplumber
 anthropic
 pydantic-settings
 python-dotenv
+httpx

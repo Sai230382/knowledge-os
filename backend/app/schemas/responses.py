@@ -28,6 +28,11 @@ class TextRequest(BaseModel):
     instructions: Optional[str] = None
 
 
+class UrlRequest(BaseModel):
+    url: str
+    instructions: Optional[str] = None
+
+
 class HealthResponse(BaseModel):
     status: str
     message: str

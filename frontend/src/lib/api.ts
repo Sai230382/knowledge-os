@@ -34,6 +34,14 @@ export async function analyzeText(text: string, instructions?: string): Promise<
   return data;
 }
 
+export async function analyzeUrl(url: string, instructions?: string): Promise<AnalysisResponse> {
+  const { data } = await api.post<AnalysisResponse>("/api/analyze-url", {
+    url,
+    ...(instructions?.trim() && { instructions }),
+  }, { timeout: 600000 });  // 10 min timeout for large remote files
+  return data;
+}
+
 export async function healthCheck(): Promise<boolean> {
   try {
     await api.get("/api/health");
