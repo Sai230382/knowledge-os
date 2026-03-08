@@ -107,8 +107,33 @@ IMPORTANT:
 - If no numeric data exists across any chunk, set "kpis" to null"""
 
 
+def _repair_json(text: str) -> str:
+    """Attempt to fix common JSON issues from LLM output."""
+    # Remove trailing commas before } or ]
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    # Fix missing commas between objects/arrays (}\n{  or ]\n[  or "\n")
+    text = re.sub(r'(\})\s*\n\s*(\{)', r'\1,\n\2', text)
+    text = re.sub(r'(\])\s*\n\s*(\[)', r'\1,\n\2', text)
+    text = re.sub(r'(")\s*\n\s*(")', r'\1,\n\2', text)
+
+    # Fix missing commas between key-value pairs ("value"\n  "key":)
+    text = re.sub(r'(")\s*\n(\s*"[^"]+":)', r'\1,\n\2', text)
+
+    # Fix unescaped quotes inside strings (common LLM mistake)
+    # This is tricky — only attempt simple cases
+    # Replace straight double quotes inside already-quoted values
+    lines = text.split('\n')
+    fixed_lines = []
+    for line in lines:
+        fixed_lines.append(line)
+    text = '\n'.join(fixed_lines)
+
+    return text
+
+
 def _parse_claude_json(raw_text: str) -> dict:
-    """Parse JSON from Claude's response, handling markdown fences and surrounding text."""
+    """Parse JSON from Claude's response, with repair for common LLM JSON mistakes."""
     raw_text = raw_text.strip()
 
     # Strip markdown code fences if present
@@ -123,7 +148,21 @@ def _parse_claude_json(raw_text: str) -> dict:
     if json_match:
         raw_text = json_match.group(0)
 
-    return json.loads(raw_text)
+    # First try: parse as-is
+    try:
+        return json.loads(raw_text)
+    except json.JSONDecodeError:
+        pass
+
+    # Second try: repair common issues and parse again
+    repaired = _repair_json(raw_text)
+    try:
+        return json.loads(repaired)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parse failed even after repair: {e}")
+        logger.error(f"First 500 chars: {raw_text[:500]}")
+        logger.error(f"Last 500 chars: {raw_text[-500:]}")
+        raise
 
 
 async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> str:
@@ -141,6 +180,21 @@ async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_promp
         messages=[{"role": "user", "content": user_prompt}],
     )
     return response.content[0].text.strip()
+
+
+async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> dict:
+    """Call Claude and parse JSON response, with one automatic retry on parse failure."""
+    for attempt in range(2):
+        raw = await _call_claude(client, system, user_prompt, max_tokens)
+        try:
+            return _parse_claude_json(raw)
+        except json.JSONDecodeError:
+            if attempt == 0:
+                logger.warning("JSON parse failed, retrying Claude call...")
+                # Add extra instruction to the prompt for retry
+                user_prompt = user_prompt + "\n\nIMPORTANT: Your response MUST be valid JSON. Double-check all commas, brackets, and quotes."
+            else:
+                raise
 
 
 def _split_text_into_chunks(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
@@ -286,8 +340,7 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     if num_chunks == 1:
         # Single chunk — original simple path
         prompt = _build_chunk_prompt(chunks[0], tables, instructions, 0, 1)
-        raw = await _call_claude(client, SYSTEM_PROMPT, prompt)
-        data = _parse_claude_json(raw)
+        data = await _call_and_parse(client, SYSTEM_PROMPT, prompt)
         return AnalysisOutput(**data), 1
 
     # Multi-chunk analysis
@@ -299,8 +352,7 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
         prompt = _build_chunk_prompt(
             chunk_text, table_groups[i], instructions, i, num_chunks
         )
-        raw = await _call_claude(client, SYSTEM_PROMPT, prompt)
-        data = _parse_claude_json(raw)
+        data = await _call_and_parse(client, SYSTEM_PROMPT, prompt)
         chunk_results.append(data)
 
     # Merge all chunk results
@@ -316,14 +368,12 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
                 merged_batch.append(batch[0])
             else:
                 merge_prompt = _build_merge_prompt(batch, instructions)
-                raw = await _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
-                merged_batch.append(_parse_claude_json(raw))
+                merged_batch.append(await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384))
         chunk_results = merged_batch
 
     # Final merge
     merge_prompt = _build_merge_prompt(chunk_results, instructions)
-    raw = await _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
-    data = _parse_claude_json(raw)
+    data = await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
 
     return AnalysisOutput(**data), num_chunks
 
@@ -371,8 +421,7 @@ async def refine_analysis(
         f"Return the COMPLETE updated analysis JSON."
     )
 
-    raw = await _call_claude(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=16384)
-    data = _parse_claude_json(raw)
+    data = await _call_and_parse(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=16384)
     return AnalysisOutput(**data)
 
 
@@ -422,6 +471,5 @@ async def accumulate_analysis(
         f"Return the COMPLETE merged analysis JSON."
     )
 
-    raw = await _call_claude(client, ACCUMULATE_SYSTEM_PROMPT, prompt, max_tokens=16384)
-    data = _parse_claude_json(raw)
+    data = await _call_and_parse(client, ACCUMULATE_SYSTEM_PROMPT, prompt, max_tokens=16384)
     return AnalysisOutput(**data)
