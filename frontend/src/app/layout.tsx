@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Knowledge OS",
+  title: "Contextus",
   description: "Extract patterns, KPIs, and knowledge graphs from your documents",
 };
 

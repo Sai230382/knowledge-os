@@ -190,7 +190,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
     <div className="h-full flex flex-col p-4 space-y-6 overflow-y-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">Knowledge OS</h1>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-white">Contextus</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {hasResults ? "Query your analysis or add more data" : "Upload documents, fetch from URL, or paste text"}
           </p>

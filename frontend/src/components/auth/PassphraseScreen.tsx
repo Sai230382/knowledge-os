@@ -36,7 +36,7 @@ export default function PassphraseScreen({ onEnter }: PassphraseScreenProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Knowledge OS</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Contextus</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             AI-Powered Document Intelligence
           </p>

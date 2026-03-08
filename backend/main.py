@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Knowledge OS", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Contextus", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +41,6 @@ app.include_router(jobs.router)
 async def health_check():
     return {
         "status": "ok",
-        "message": "Knowledge OS API is running",
+        "message": "Contextus API is running",
         "model": settings.claude_model,
     }
