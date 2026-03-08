@@ -11,6 +11,7 @@ export default function ProjectBar() {
     removeProject,
     renameProject,
     canAddProject,
+    signOut,
   } = useProjects();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -124,8 +125,19 @@ export default function ProjectBar() {
 
       {/* Project count */}
       <div className="text-[10px] text-slate-400 dark:text-slate-500 ml-2 flex-shrink-0 tabular-nums">
-        {projects.length}/{5}
+        {projects.length}/{20}
       </div>
+
+      {/* Sign out */}
+      <button
+        onClick={signOut}
+        className="flex items-center justify-center w-6 h-6 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 ml-1"
+        title="Sign out"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </button>
     </div>
   );
 }

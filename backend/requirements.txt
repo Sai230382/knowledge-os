@@ -9,3 +9,5 @@ anthropic
 pydantic-settings
 python-dotenv
 httpx
+sqlalchemy[asyncio]
+asyncpg

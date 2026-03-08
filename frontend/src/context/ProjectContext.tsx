@@ -1,50 +1,17 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { Project, AnalysisResponse } from "@/lib/types";
+import {
+  enterWorkspace as enterWorkspaceAPI,
+  fetchProjects as fetchProjectsAPI,
+  createProjectAPI,
+  updateProjectAPI,
+  deleteProjectAPI,
+} from "@/lib/api";
+import PassphraseScreen from "@/components/auth/PassphraseScreen";
 
-const STORAGE_KEY = "knowledge-os-projects";
-const ACTIVE_KEY = "knowledge-os-active-project";
-const MAX_PROJECTS = 5;
-
-function generateId(): string {
-  return `proj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function createProject(name: string): Project {
-  return {
-    id: generateId(),
-    name,
-    createdAt: Date.now(),
-    result: null,
-    error: "",
-  };
-}
-
-function loadProjects(): { projects: Project[]; activeId: string } {
-  if (typeof window === "undefined") {
-    const defaultProject = createProject("Project 1");
-    return { projects: [defaultProject], activeId: defaultProject.id };
-  }
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const savedActiveId = localStorage.getItem(ACTIVE_KEY);
-    if (raw) {
-      const projects: Project[] = JSON.parse(raw);
-      if (projects.length > 0) {
-        const activeId = savedActiveId && projects.find((p) => p.id === savedActiveId)
-          ? savedActiveId
-          : projects[0].id;
-        return { projects, activeId };
-      }
-    }
-  } catch {
-    // Corrupted storage — start fresh
-  }
-
-  const defaultProject = createProject("Project 1");
-  return { projects: [defaultProject], activeId: defaultProject.id };
-}
+const WORKSPACE_KEY = "knowledge-os-workspace-id";
+const MAX_PROJECTS = 20;
 
 interface ProjectContextType {
   projects: Project[];
@@ -57,94 +24,198 @@ interface ProjectContextType {
   setResult: (result: AnalysisResponse | null) => void;
   setError: (error: string) => void;
   canAddProject: boolean;
+  signOut: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextType>(null!);
 
-// Default project used for SSR / before hydration
-const SSR_DEFAULT_PROJECT = createProject("Project 1");
+// Fallback project for SSR / loading states
+const EMPTY_PROJECT: Project = {
+  id: "__loading__",
+  name: "Loading...",
+  createdAt: Date.now(),
+  result: null,
+  error: "",
+};
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>([SSR_DEFAULT_PROJECT]);
-  const [activeProjectId, setActiveProjectId] = useState<string>(SSR_DEFAULT_PROJECT.id);
-  const [mounted, setMounted] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string>("");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // Load from localStorage on mount (client only)
+  // On mount: check for saved workspace and load projects
   useEffect(() => {
-    const { projects: loaded, activeId } = loadProjects();
-    setProjects(loaded);
-    setActiveProjectId(activeId);
-    setMounted(true);
+    const savedId = localStorage.getItem(WORKSPACE_KEY);
+    if (savedId) {
+      setWorkspaceId(savedId);
+      fetchProjectsAPI(savedId)
+        .then((loaded) => {
+          if (loaded.length > 0) {
+            setProjects(loaded);
+            setActiveProjectId(loaded[0].id);
+          } else {
+            // Workspace exists but has no projects — shouldn't happen, but handle it
+            localStorage.removeItem(WORKSPACE_KEY);
+            setWorkspaceId(null);
+          }
+        })
+        .catch(() => {
+          // Invalid workspace — clear and show passphrase
+          localStorage.removeItem(WORKSPACE_KEY);
+          setWorkspaceId(null);
+        })
+        .finally(() => {
+          setAuthChecked(true);
+          setInitialLoading(false);
+        });
+    } else {
+      setAuthChecked(true);
+      setInitialLoading(false);
+    }
   }, []);
 
-  // Save to localStorage whenever projects change
-  useEffect(() => {
-    if (!mounted) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-      localStorage.setItem(ACTIVE_KEY, activeProjectId);
-    } catch {
-      // Storage full or unavailable
-    }
-  }, [projects, activeProjectId, mounted]);
+  // --- Auth ---
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || createProject("Project 1");
+  const handleEnterWorkspace = useCallback(async (passphrase: string) => {
+    const { workspace_id, projects: loaded } = await enterWorkspaceAPI(passphrase);
+    setWorkspaceId(workspace_id);
+    localStorage.setItem(WORKSPACE_KEY, workspace_id);
+    setProjects(loaded);
+    setActiveProjectId(loaded[0]?.id || "");
+  }, []);
+
+  const signOut = useCallback(() => {
+    localStorage.removeItem(WORKSPACE_KEY);
+    setWorkspaceId(null);
+    setProjects([]);
+    setActiveProjectId("");
+  }, []);
+
+  // --- Project CRUD ---
+
+  const activeProject =
+    projects.find((p) => p.id === activeProjectId) || projects[0] || EMPTY_PROJECT;
 
   const switchProject = useCallback((id: string) => {
     setActiveProjectId(id);
   }, []);
 
-  const addProject = useCallback((name?: string) => {
-    setProjects((prev) => {
-      if (prev.length >= MAX_PROJECTS) return prev;
-      const projectName = name || `Project ${prev.length + 1}`;
-      const newProject = createProject(projectName);
-      setActiveProjectId(newProject.id);
-      return [...prev, newProject];
-    });
-  }, []);
+  const addProject = useCallback(
+    (name?: string) => {
+      if (!workspaceId) return;
+      const projectName = name || `Project ${projects.length + 1}`;
 
-  const removeProject = useCallback((id: string) => {
-    setProjects((prev) => {
-      if (prev.length <= 1) return prev;
-      const filtered = prev.filter((p) => p.id !== id);
-      setActiveProjectId((currentId) => {
-        if (currentId === id) {
-          return filtered[0].id;
-        }
-        return currentId;
-      });
-      return filtered;
-    });
-  }, []);
+      createProjectAPI(workspaceId, projectName)
+        .then((newProject) => {
+          setProjects((prev) => [...prev, newProject]);
+          setActiveProjectId(newProject.id);
+        })
+        .catch((err) => console.error("Failed to create project:", err));
+    },
+    [workspaceId, projects.length],
+  );
 
-  const renameProject = useCallback((id: string, name: string) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, name: name.trim() || p.name } : p))
+  const removeProject = useCallback(
+    (id: string) => {
+      if (!workspaceId || projects.length <= 1) return;
+
+      deleteProjectAPI(workspaceId, id)
+        .then(() => {
+          setProjects((prev) => {
+            const filtered = prev.filter((p) => p.id !== id);
+            setActiveProjectId((current) =>
+              current === id ? filtered[0].id : current,
+            );
+            return filtered;
+          });
+        })
+        .catch((err) => console.error("Failed to delete project:", err));
+    },
+    [workspaceId, projects.length],
+  );
+
+  const renameProject = useCallback(
+    (id: string, newName: string) => {
+      if (!workspaceId) return;
+      const trimmed = newName.trim();
+      if (!trimmed) return;
+
+      // Optimistic update
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, name: trimmed } : p)),
+      );
+
+      updateProjectAPI(workspaceId, id, { name: trimmed }).catch((err) =>
+        console.error("Failed to rename project:", err),
+      );
+    },
+    [workspaceId],
+  );
+
+  const setResult = useCallback(
+    (result: AnalysisResponse | null) => {
+      if (!workspaceId) return;
+
+      // Optimistic update
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === activeProjectId ? { ...p, result, error: "" } : p,
+        ),
+      );
+
+      // Persist to server
+      updateProjectAPI(workspaceId, activeProjectId, {
+        result,
+        error: "",
+      }).catch((err) => console.error("Failed to save result:", err));
+    },
+    [workspaceId, activeProjectId],
+  );
+
+  const setError = useCallback(
+    (error: string) => {
+      if (!workspaceId) return;
+
+      // Optimistic update
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === activeProjectId ? { ...p, error } : p,
+        ),
+      );
+
+      // Persist to server
+      updateProjectAPI(workspaceId, activeProjectId, { error }).catch((err) =>
+        console.error("Failed to save error:", err),
+      );
+    },
+    [workspaceId, activeProjectId],
+  );
+
+  // --- Loading / Auth screens ---
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <svg className="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm text-slate-500 dark:text-slate-400">Loading workspace...</span>
+        </div>
+      </div>
     );
-  }, []);
+  }
 
-  const setResult = useCallback((result: AnalysisResponse | null) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === activeProjectId ? { ...p, result, error: "" } : p
-      )
-    );
-  }, [activeProjectId]);
-
-  const setError = useCallback((error: string) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === activeProjectId ? { ...p, error } : p
-      )
-    );
-  }, [activeProjectId]);
-
-  const noop = useCallback(() => {}, []);
+  if (authChecked && !workspaceId) {
+    return <PassphraseScreen onEnter={handleEnterWorkspace} />;
+  }
 
   return (
     <ProjectContext.Provider
-      value={mounted ? {
+      value={{
         projects,
         activeProject,
         activeProjectId,
@@ -155,17 +226,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setResult,
         setError,
         canAddProject: projects.length < MAX_PROJECTS,
-      } : {
-        projects,
-        activeProject,
-        activeProjectId,
-        switchProject: noop,
-        addProject: noop,
-        removeProject: noop,
-        renameProject: noop,
-        setResult: noop,
-        setError: noop,
-        canAddProject: false,
+        signOut,
       }}
     >
       {children}

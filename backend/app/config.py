@@ -16,6 +16,7 @@ class Settings:
     )
     max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "500"))
     port: int = int(os.getenv("PORT", "8000"))
+    database_url: str = os.getenv("DATABASE_URL", "")
 
 
 settings = Settings()
