@@ -31,7 +31,12 @@ Your analysis categories:
    - description: a brief 1-2 sentence summary of what this entity is/does in context
    - relationships to other entities with labeled edges
 
-6. CONTEXT GRAPH: Create a separate graph that shows how high-level concepts and themes connect and flow into each other. This graph should show dependencies, influences, and contextual relationships between major themes found in the documents. Use nodes for major themes/concepts and edges for relationships like "depends on", "feeds into", "derived from", "enables", "conflicts with".
+6. CONTEXT GRAPH (360° VIEW): Create a high-level relationship map that shows how ALL entity types interconnect across the organization. This is a bird's-eye view of the entire ecosystem — not just concepts, but the full picture:
+   - Include nodes of ALL types: key people, core processes, critical technologies, strategic concepts, and organizations
+   - Show CROSS-CATEGORY relationships: which people own which processes, which technologies enable which processes, which organizations depend on which technologies, etc.
+   - Use relationship labels like "owns", "manages", "depends on", "feeds into", "enables", "conflicts with", "supports", "governs", "uses", "produces"
+   - Focus on the most important 15-25 entities that tell the complete story
+   - This graph should give a CXO a complete picture of how everything connects in one view
 
 7. KPIs (only when tabular/numeric data is present): Derive key performance indicators from any numeric data. For each KPI provide the metric name, current value, trend direction (up/down/stable), and an explanatory note about what it means and why it matters. If no numeric data is present, set kpis to null.
 
@@ -59,7 +64,7 @@ Response JSON Schema (respond ONLY with this JSON, no other text):
   },
   "context_graph": {
     "nodes": [
-      {"id": "unique-slug", "label": "Theme Name", "type": "concept", "description": "Brief description of this theme"}
+      {"id": "unique-slug", "label": "Display Name", "type": "person|process|technology|concept|organization", "description": "Brief description of this entity and its role"}
     ],
     "edges": [
       {"source": "node-id", "target": "node-id", "label": "depends on|feeds into|enables|etc", "strength": 0.7}
@@ -74,7 +79,7 @@ IMPORTANT:
 - All entity IDs in graphs must be unique lowercase slugs (e.g., "john-smith", "crm-system")
 - Every edge must reference valid node IDs that exist in the nodes array
 - Be thorough: extract ALL entities and relationships you can find
-- Knowledge graph should map real entities; context graph should map themes/concepts
+- Knowledge graph should map ALL entities in detail; context graph should show the most important 15-25 entities across ALL types as a 360° executive overview
 - related_entities in tribal_knowledge and exceptions MUST reference valid node IDs from the knowledge_graph
 - Every node MUST have a description field
 - If no numeric data exists, set "kpis" to null
