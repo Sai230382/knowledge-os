@@ -39,29 +39,3 @@ app.include_router(projects.router)
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "message": "Knowledge OS API is running"}
-
-
-@app.get("/api/debug/db")
-async def debug_db():
-    """Temporary endpoint to diagnose database issues."""
-    import traceback
-    info = {"database_url_set": bool(os.getenv("DATABASE_URL"))}
-    try:
-        from app.database import _get_engine
-        engine = _get_engine()
-        info["engine_url"] = str(engine.url).split("@")[-1] if engine else "None"  # hide credentials
-
-        from app.database import init_db
-        await init_db()
-        info["tables_created"] = True
-
-        from sqlalchemy import text
-        from app.database import _get_session_maker
-        maker = _get_session_maker()
-        async with maker() as session:
-            result = await session.execute(text("SELECT 1"))
-            info["connection_test"] = "OK"
-    except Exception as e:
-        info["error"] = str(e)
-        info["traceback"] = traceback.format_exc()
-    return info
