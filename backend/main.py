@@ -39,4 +39,8 @@ app.include_router(jobs.router)
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "message": "Knowledge OS API is running"}
+    return {
+        "status": "ok",
+        "message": "Knowledge OS API is running",
+        "model": settings.claude_model,
+    }
