@@ -127,11 +127,17 @@ def _parse_claude_json(raw_text: str) -> dict:
 
 
 async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> str:
-    """Call Claude API asynchronously and return raw text response."""
+    """Call Claude API asynchronously and return raw text response.
+    Uses prompt caching on the system prompt to reduce cost by ~90% on repeated calls.
+    """
     response = await client.messages.create(
-        model="claude-4-sonnet-20250514",
+        model=settings.claude_model,
         max_tokens=max_tokens,
-        system=system,
+        system=[{
+            "type": "text",
+            "text": system,
+            "cache_control": {"type": "ephemeral"},
+        }],
         messages=[{"role": "user", "content": user_prompt}],
     )
     return response.content[0].text.strip()
