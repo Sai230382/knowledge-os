@@ -315,3 +315,102 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     data = _parse_claude_json(raw)
 
     return AnalysisOutput(**data), num_chunks
+
+
+REFINE_SYSTEM_PROMPT = """You are a Knowledge Analysis Assistant. You have a current analysis of a document (with patterns, knowledge graphs, KPIs, etc.) and the user wants to refine, query, or expand it.
+
+Based on the user's request, produce an UPDATED version of the analysis JSON. You may:
+- Add new patterns, entities, or KPIs that the user asks about
+- Remove items the user says are irrelevant
+- Expand details on specific areas
+- Add new graph connections the user identifies
+- Adjust confidence levels based on user feedback
+- Add new context graph nodes/edges for themes the user wants explored
+- Answer the user's question by incorporating the answer INTO the analysis (e.g., add a new pattern or insight)
+
+IMPORTANT RULES:
+- Always return the COMPLETE updated analysis JSON (not just the changes)
+- Keep all existing items unless the user explicitly asks to remove them
+- All entity IDs must be unique lowercase slugs
+- Every edge must reference valid node IDs
+- related_entities must reference valid knowledge_graph node IDs
+- Every node MUST have a description field
+- Respond ONLY with valid JSON matching the original schema, no markdown or extra text"""
+
+
+async def refine_analysis(
+    current_analysis: dict,
+    user_query: str,
+) -> AnalysisOutput:
+    """
+    Refine/query an existing analysis based on user input.
+    The user can ask questions, request more detail, add connections, etc.
+    """
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+    # Truncate the current analysis if it's too large
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 120000:
+        analysis_json = analysis_json[:120000] + "\n... (truncated)"
+
+    prompt = (
+        f"## Current Analysis:\n{analysis_json}\n\n"
+        f"## User Request:\n{user_query}\n\n"
+        f"Update the analysis based on the user's request. "
+        f"Return the COMPLETE updated analysis JSON."
+    )
+
+    raw = _call_claude(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=16384)
+    data = _parse_claude_json(raw)
+    return AnalysisOutput(**data)
+
+
+ACCUMULATE_SYSTEM_PROMPT = """You are a Knowledge Accumulation Specialist. You have an EXISTING analysis from previous documents and a NEW analysis from newly uploaded documents. Merge them into one comprehensive, unified analysis.
+
+Rules:
+- Keep ALL existing knowledge — never drop previous findings
+- Add all NEW patterns, entities, KPIs from the new analysis
+- Deduplicate — if the same entity/pattern appears in both, merge them (combine evidence, take higher confidence)
+- Create CROSS-DOCUMENT connections — if an entity from the old analysis relates to one from the new analysis, add that edge
+- Update KPIs if newer values are available
+- Expand the knowledge and context graphs with new nodes and edges
+- The result should represent the ACCUMULATED knowledge across all documents
+
+IMPORTANT:
+- All entity IDs must be unique lowercase slugs
+- Every edge must reference valid node IDs
+- related_entities must reference valid knowledge_graph node IDs
+- Every node MUST have a description field
+- Respond ONLY with valid JSON, no markdown or extra text"""
+
+
+async def accumulate_analysis(
+    existing_analysis: dict,
+    new_analysis: dict,
+) -> AnalysisOutput:
+    """
+    Merge a new analysis into an existing one, accumulating knowledge.
+    """
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+    existing_json = json.dumps(existing_analysis, indent=1)
+    new_json = json.dumps(new_analysis, indent=1)
+
+    # If combined is too large, truncate the existing one (keep new in full)
+    if len(existing_json) + len(new_json) > 150000:
+        max_existing = 150000 - len(new_json) - 1000
+        if max_existing < 10000:
+            max_existing = 10000
+        existing_json = existing_json[:max_existing] + "\n... (truncated)"
+
+    prompt = (
+        f"## Existing Analysis (from previous documents):\n{existing_json}\n\n"
+        f"## New Analysis (from newly uploaded documents):\n{new_json}\n\n"
+        f"Merge these into ONE unified analysis. Keep all existing knowledge and add new findings. "
+        f"Deduplicate and create cross-document connections. "
+        f"Return the COMPLETE merged analysis JSON."
+    )
+
+    raw = _call_claude(client, ACCUMULATE_SYSTEM_PROMPT, prompt, max_tokens=16384)
+    data = _parse_claude_json(raw)
+    return AnalysisOutput(**data)

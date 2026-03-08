@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AnalysisResponse } from "./types";
+import { AnalysisOutput, AnalysisResponse } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
@@ -40,6 +40,17 @@ export async function analyzeUrl(url: string, instructions?: string): Promise<An
     ...(instructions?.trim() && { instructions }),
   }, { timeout: 600000 });  // 10 min timeout for large remote files
   return data;
+}
+
+export async function refineAnalysis(
+  currentAnalysis: AnalysisOutput,
+  query: string,
+): Promise<AnalysisOutput> {
+  const { data } = await api.post<{ analysis: AnalysisOutput }>("/api/refine", {
+    current_analysis: currentAnalysis,
+    query,
+  }, { timeout: 300000 });
+  return data.analysis;
 }
 
 export async function healthCheck(): Promise<boolean> {

@@ -1,9 +1,12 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import analyze_content
+from app.services.claude_service import analyze_content, refine_analysis
 from app.services.url_service import download_file
-from app.schemas.responses import AnalysisResponse, FileMetadata, PathRequest, TextRequest, UrlRequest
+from app.schemas.responses import (
+    AnalysisResponse, FileMetadata, PathRequest, TextRequest,
+    UrlRequest, RefineRequest, RefineResponse,
+)
 
 router = APIRouter()
 
@@ -138,3 +141,16 @@ async def analyze_url(request: UrlRequest):
         total_text_length=len(combined_text),
         chunks_analyzed=chunks_analyzed,
     )
+
+
+@router.post("/api/refine", response_model=RefineResponse)
+async def refine(request: RefineRequest):
+    if not request.query.strip():
+        raise HTTPException(400, "Query cannot be empty")
+
+    try:
+        updated = await refine_analysis(request.current_analysis, request.query)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to refine analysis: {str(e)}")
+
+    return RefineResponse(analysis=updated)

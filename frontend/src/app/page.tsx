@@ -17,6 +17,7 @@ export default function Home() {
           onError={setError}
           isLoading={isLoading}
           setIsLoading={setIsLoading}
+          currentResult={activeProject.result}
         />
       </div>
       <div className="flex-1 min-w-0 bg-white dark:bg-slate-950">

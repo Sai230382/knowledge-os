@@ -34,6 +34,15 @@ class UrlRequest(BaseModel):
     instructions: Optional[str] = None
 
 
+class RefineRequest(BaseModel):
+    current_analysis: dict
+    query: str
+
+
+class RefineResponse(BaseModel):
+    analysis: AnalysisOutput
+
+
 class HealthResponse(BaseModel):
     status: str
     message: str
