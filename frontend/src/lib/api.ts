@@ -112,13 +112,16 @@ interface WorkspaceResponse {
 }
 
 export async function enterWorkspace(passphrase: string): Promise<WorkspaceResponse> {
-  const { data } = await api.post<WorkspaceResponse>("/api/auth/enter", { passphrase });
+  const { data } = await api.post<WorkspaceResponse>("/api/auth/enter", { passphrase }, {
+    timeout: 15000,
+  });
   return data;
 }
 
 export async function fetchProjects(workspaceId: string): Promise<Project[]> {
   const { data } = await api.get<Project[]>("/api/projects", {
     params: { workspace_id: workspaceId },
+    timeout: 15000, // 15s timeout — fail fast if backend is down
   });
   return data;
 }
