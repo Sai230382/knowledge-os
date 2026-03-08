@@ -214,26 +214,36 @@ def _parse_claude_json(raw_text: str) -> dict:
 async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> str:
     """Call Claude API asynchronously and return raw text response.
     Uses prompt caching on the system prompt to reduce cost by ~90% on repeated calls.
+    Retries automatically on rate limit (429) errors with backoff.
     """
-    t0 = time.time()
-    response = await client.messages.create(
-        model=settings.claude_model,
-        max_tokens=max_tokens,
-        system=[{
-            "type": "text",
-            "text": system,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-    logger.info(
-        f"Claude API call: {time.time() - t0:.1f}s, "
-        f"in={response.usage.input_tokens} out={response.usage.output_tokens} "
-        f"stop={response.stop_reason}"
-    )
-    if response.stop_reason == "max_tokens":
-        logger.warning(f"Response truncated at {max_tokens} tokens! Output may be incomplete.")
-    return response.content[0].text.strip()
+    max_retries = 3
+    for retry in range(max_retries):
+        try:
+            t0 = time.time()
+            response = await client.messages.create(
+                model=settings.claude_model,
+                max_tokens=max_tokens,
+                system=[{
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }],
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            logger.info(
+                f"Claude API call: {time.time() - t0:.1f}s, "
+                f"in={response.usage.input_tokens} out={response.usage.output_tokens} "
+                f"stop={response.stop_reason}"
+            )
+            if response.stop_reason == "max_tokens":
+                logger.warning(f"Response truncated at {max_tokens} tokens! Output may be incomplete.")
+            return response.content[0].text.strip()
+        except anthropic.RateLimitError as e:
+            wait_time = 30 * (retry + 1)  # 30s, 60s, 90s
+            logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {retry + 1}/{max_retries}...")
+            await asyncio.sleep(wait_time)
+            if retry == max_retries - 1:
+                raise
 
 
 async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> dict:
