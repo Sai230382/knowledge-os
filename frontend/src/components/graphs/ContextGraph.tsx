@@ -133,7 +133,7 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
       {/* Stats bar */}
       <div className="flex items-center gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-t-lg flex-wrap flex-shrink-0">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-          {filteredData.nodes.length} themes, {filteredData.edges.length} connections
+          {filteredData.nodes.length} entities, {filteredData.edges.length} connections
           {hopLevel !== "all" && selectedNode && (
             <span className="text-blue-500 dark:text-blue-400 ml-1">
               ({hopLevel} hop{hopLevel > 1 ? "s" : ""} from {selectedNode.label})
