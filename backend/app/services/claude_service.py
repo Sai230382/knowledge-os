@@ -126,9 +126,9 @@ def _parse_claude_json(raw_text: str) -> dict:
     return json.loads(raw_text)
 
 
-def _call_claude(client: anthropic.Anthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> str:
-    """Call Claude API and return raw text response."""
-    response = client.messages.create(
+async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> str:
+    """Call Claude API asynchronously and return raw text response."""
+    response = await client.messages.create(
         model="claude-4-sonnet-20250514",
         max_tokens=max_tokens,
         system=system,
@@ -269,7 +269,7 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     - Large docs: chunk → analyze each → merge results
     Returns (analysis_output, num_chunks_analyzed)
     """
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     # Split text into chunks
     chunks = _split_text_into_chunks(text)
@@ -280,7 +280,7 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     if num_chunks == 1:
         # Single chunk — original simple path
         prompt = _build_chunk_prompt(chunks[0], tables, instructions, 0, 1)
-        raw = _call_claude(client, SYSTEM_PROMPT, prompt)
+        raw = await _call_claude(client, SYSTEM_PROMPT, prompt)
         data = _parse_claude_json(raw)
         return AnalysisOutput(**data), 1
 
@@ -293,7 +293,7 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
         prompt = _build_chunk_prompt(
             chunk_text, table_groups[i], instructions, i, num_chunks
         )
-        raw = _call_claude(client, SYSTEM_PROMPT, prompt)
+        raw = await _call_claude(client, SYSTEM_PROMPT, prompt)
         data = _parse_claude_json(raw)
         chunk_results.append(data)
 
@@ -310,13 +310,13 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
                 merged_batch.append(batch[0])
             else:
                 merge_prompt = _build_merge_prompt(batch, instructions)
-                raw = _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
+                raw = await _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
                 merged_batch.append(_parse_claude_json(raw))
         chunk_results = merged_batch
 
     # Final merge
     merge_prompt = _build_merge_prompt(chunk_results, instructions)
-    raw = _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
+    raw = await _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
     data = _parse_claude_json(raw)
 
     return AnalysisOutput(**data), num_chunks
@@ -351,7 +351,7 @@ async def refine_analysis(
     Refine/query an existing analysis based on user input.
     The user can ask questions, request more detail, add connections, etc.
     """
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     # Truncate the current analysis if it's too large
     analysis_json = json.dumps(current_analysis, indent=1)
@@ -365,7 +365,7 @@ async def refine_analysis(
         f"Return the COMPLETE updated analysis JSON."
     )
 
-    raw = _call_claude(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=16384)
+    raw = await _call_claude(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=16384)
     data = _parse_claude_json(raw)
     return AnalysisOutput(**data)
 
@@ -396,7 +396,7 @@ async def accumulate_analysis(
     """
     Merge a new analysis into an existing one, accumulating knowledge.
     """
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     existing_json = json.dumps(existing_analysis, indent=1)
     new_json = json.dumps(new_analysis, indent=1)
@@ -416,6 +416,6 @@ async def accumulate_analysis(
         f"Return the COMPLETE merged analysis JSON."
     )
 
-    raw = _call_claude(client, ACCUMULATE_SYSTEM_PROMPT, prompt, max_tokens=16384)
+    raw = await _call_claude(client, ACCUMULATE_SYSTEM_PROMPT, prompt, max_tokens=16384)
     data = _parse_claude_json(raw)
     return AnalysisOutput(**data)
