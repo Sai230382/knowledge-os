@@ -73,8 +73,13 @@ IMPORTANT:
 - Respond ONLY with valid JSON, no markdown formatting or code blocks"""
 
 
-def build_user_prompt(text: str, tables: list[dict]) -> str:
+def build_user_prompt(text: str, tables: list[dict], instructions: str | None = None) -> str:
     parts = ["Analyze the following document content and extract structured knowledge.\n"]
+
+    if instructions:
+        parts.append("## User Instructions / Focus Areas:\n")
+        parts.append(instructions)
+        parts.append("\nPlease pay special attention to the instructions above when analyzing the content.\n")
 
     parts.append("## Document Text:\n")
     parts.append(text[:100000])  # Limit to ~100k chars to stay within context
@@ -94,10 +99,10 @@ def build_user_prompt(text: str, tables: list[dict]) -> str:
     return "\n".join(parts)
 
 
-async def analyze_content(text: str, tables: list[dict]) -> AnalysisOutput:
+async def analyze_content(text: str, tables: list[dict], instructions: str | None = None) -> AnalysisOutput:
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
-    user_prompt = build_user_prompt(text, tables)
+    user_prompt = build_user_prompt(text, tables, instructions)
 
     response = client.messages.create(
         model="claude-4-sonnet-20250514",

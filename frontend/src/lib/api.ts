@@ -5,27 +5,32 @@ const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
 });
 
-export async function uploadFiles(files: File[]): Promise<AnalysisResponse> {
+export async function uploadFiles(files: File[], instructions?: string): Promise<AnalysisResponse> {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
+  if (instructions?.trim()) {
+    formData.append("instructions", instructions);
+  }
   const { data } = await api.post<AnalysisResponse>("/api/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
-    timeout: 120000,
+    timeout: 300000,
   });
   return data;
 }
 
-export async function analyzePath(path: string): Promise<AnalysisResponse> {
+export async function analyzePath(path: string, instructions?: string): Promise<AnalysisResponse> {
   const { data } = await api.post<AnalysisResponse>("/api/analyze-path", {
     path,
-  }, { timeout: 120000 });
+    ...(instructions?.trim() && { instructions }),
+  }, { timeout: 300000 });
   return data;
 }
 
-export async function analyzeText(text: string): Promise<AnalysisResponse> {
+export async function analyzeText(text: string, instructions?: string): Promise<AnalysisResponse> {
   const { data } = await api.post<AnalysisResponse>("/api/analyze-text", {
     text,
-  }, { timeout: 120000 });
+    ...(instructions?.trim() && { instructions }),
+  }, { timeout: 300000 });
   return data;
 }
 

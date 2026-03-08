@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from typing import Optional
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
 from app.services.claude_service import analyze_content
 from app.schemas.responses import AnalysisResponse, FileMetadata
@@ -7,7 +8,10 @@ router = APIRouter()
 
 
 @router.post("/api/upload", response_model=AnalysisResponse)
-async def upload_files(files: list[UploadFile] = File(...)):
+async def upload_files(
+    files: list[UploadFile] = File(...),
+    instructions: Optional[str] = Form(None),
+):
     if not files:
         raise HTTPException(400, "No files provided")
 
@@ -39,7 +43,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
 
     combined_text = "\n\n".join(all_text)
 
-    analysis = await analyze_content(combined_text, all_tables)
+    analysis = await analyze_content(combined_text, all_tables, instructions)
 
     return AnalysisResponse(
         analysis=analysis,

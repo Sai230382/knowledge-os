@@ -58,7 +58,7 @@ async def analyze_path(request: PathRequest):
     if not combined_text.strip():
         raise HTTPException(400, "No text could be extracted from the provided files")
 
-    analysis = await analyze_content(combined_text, all_tables)
+    analysis = await analyze_content(combined_text, all_tables, request.instructions)
 
     return AnalysisResponse(
         analysis=analysis,
@@ -73,7 +73,7 @@ async def analyze_text(request: TextRequest):
     if not request.text.strip():
         raise HTTPException(400, "Text cannot be empty")
 
-    analysis = await analyze_content(request.text, [])
+    analysis = await analyze_content(request.text, [], request.instructions)
 
     return AnalysisResponse(
         analysis=analysis,

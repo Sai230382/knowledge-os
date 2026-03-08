@@ -20,10 +20,12 @@ class AnalysisResponse(BaseModel):
 
 class PathRequest(BaseModel):
     path: str
+    instructions: Optional[str] = None
 
 
 class TextRequest(BaseModel):
     text: str
+    instructions: Optional[str] = None
 
 
 class HealthResponse(BaseModel):

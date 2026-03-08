@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import FileUploader from "../input/FileUploader";
 import PathInput from "../input/PathInput";
 import ChatInput from "../input/ChatInput";
@@ -14,11 +15,14 @@ interface LeftPanelProps {
 }
 
 export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }: LeftPanelProps) {
+  const [instructions, setInstructions] = useState("");
+  const [showInstructions, setShowInstructions] = useState(false);
+
   const handleFiles = async (files: File[]) => {
     setIsLoading(true);
     onError("");
     try {
-      const result = await uploadFiles(files);
+      const result = await uploadFiles(files, instructions);
       onResult(result);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to analyze files";
@@ -32,7 +36,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
     setIsLoading(true);
     onError("");
     try {
-      const result = await analyzePath(path);
+      const result = await analyzePath(path, instructions);
       onResult(result);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to analyze path";
@@ -46,7 +50,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
     setIsLoading(true);
     onError("");
     try {
-      const result = await analyzeText(text);
+      const result = await analyzeText(text, instructions);
       onResult(result);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to analyze text";
@@ -66,6 +70,45 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
           </p>
         </div>
         <ThemeToggle />
+      </div>
+
+      {/* Instructions / Focus Area */}
+      <div className="space-y-2">
+        <button
+          onClick={() => setShowInstructions(!showInstructions)}
+          className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform ${showInstructions ? "rotate-90" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          <span>Instructions for Claude</span>
+          {instructions.trim() && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+              Active
+            </span>
+          )}
+        </button>
+
+        {showInstructions && (
+          <div className="space-y-1.5">
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="e.g. Focus on Sheet3 and Revenue tab. Look for KPI trends, client patterns, and exceptions. Ignore the raw data sheets."
+              rows={3}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+            />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              Guide Claude on what to focus on — specific sheets, topics, KPIs, or areas to ignore.
+            </p>
+          </div>
+        )}
       </div>
 
       <FileUploader onSubmit={handleFiles} isLoading={isLoading} />
