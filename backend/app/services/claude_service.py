@@ -248,18 +248,194 @@ async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_promp
                 raise
 
 
+ANALYSIS_TOOL = {
+    "name": "submit_analysis",
+    "description": "Submit the structured knowledge analysis results extracted from the document.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "industry_patterns": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+                        "evidence": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["title", "description", "confidence", "evidence"],
+                },
+            },
+            "client_patterns": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "frequency": {"type": "string"},
+                        "business_impact": {"type": "string"},
+                    },
+                    "required": ["title", "description", "frequency", "business_impact"],
+                },
+            },
+            "tribal_knowledge": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "risk_if_lost": {"type": "string", "enum": ["high", "medium", "low"]},
+                        "formalization_action": {"type": "string"},
+                        "related_entities": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["title", "description", "risk_if_lost", "formalization_action", "related_entities"],
+                },
+            },
+            "exceptions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "trigger": {"type": "string"},
+                        "handling": {"type": "string"},
+                        "related_entities": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["title", "description", "trigger", "handling", "related_entities"],
+                },
+            },
+            "knowledge_graph": {
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "label": {"type": "string"},
+                                "type": {"type": "string", "enum": ["person", "process", "technology", "concept", "organization"]},
+                                "description": {"type": "string"},
+                            },
+                            "required": ["id", "label", "type", "description"],
+                        },
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source": {"type": "string"},
+                                "target": {"type": "string"},
+                                "label": {"type": "string"},
+                                "strength": {"type": "number"},
+                            },
+                            "required": ["source", "target", "label", "strength"],
+                        },
+                    },
+                },
+                "required": ["nodes", "edges"],
+            },
+            "context_graph": {
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "label": {"type": "string"},
+                                "type": {"type": "string", "enum": ["person", "process", "technology", "concept", "organization"]},
+                                "description": {"type": "string"},
+                            },
+                            "required": ["id", "label", "type", "description"],
+                        },
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source": {"type": "string"},
+                                "target": {"type": "string"},
+                                "label": {"type": "string"},
+                                "strength": {"type": "number"},
+                            },
+                            "required": ["source", "target", "label", "strength"],
+                        },
+                    },
+                },
+                "required": ["nodes", "edges"],
+            },
+            "kpis": {
+                "type": ["array", "null"],
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "metric": {"type": "string"},
+                        "value": {"type": "string"},
+                        "trend": {"type": "string", "enum": ["up", "down", "stable"]},
+                        "note": {"type": "string"},
+                    },
+                    "required": ["metric", "value", "trend", "note"],
+                },
+            },
+        },
+        "required": ["industry_patterns", "client_patterns", "tribal_knowledge", "exceptions", "knowledge_graph", "context_graph", "kpis"],
+    },
+}
+
+
 async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> dict:
-    """Call Claude and parse JSON response, with one automatic retry on parse failure."""
-    for attempt in range(2):
-        raw = await _call_claude(client, system, user_prompt, max_tokens)
+    """Call Claude using tool use for GUARANTEED valid JSON output.
+    The API uses constrained decoding — no more JSON parse errors ever.
+    Falls back to raw text parsing if tool use fails for any reason.
+    """
+    max_retries = 3
+    for retry in range(max_retries):
         try:
-            return _parse_claude_json(raw)
-        except json.JSONDecodeError:
-            if attempt == 0:
-                logger.warning("JSON parse failed, retrying Claude call...")
-                # Add extra instruction to the prompt for retry
-                user_prompt = user_prompt + "\n\nIMPORTANT: Your response MUST be valid JSON. Double-check all commas, brackets, and quotes."
-            else:
+            t0 = time.time()
+            response = await client.messages.create(
+                model=settings.claude_model,
+                max_tokens=max_tokens,
+                system=[{
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }],
+                messages=[{"role": "user", "content": user_prompt}],
+                tools=[ANALYSIS_TOOL],
+                tool_choice={"type": "tool", "name": "submit_analysis"},
+            )
+            logger.info(
+                f"Claude tool-use call: {time.time() - t0:.1f}s, "
+                f"in={response.usage.input_tokens} out={response.usage.output_tokens} "
+                f"stop={response.stop_reason}"
+            )
+
+            # Extract the tool call result — already a valid dict!
+            for block in response.content:
+                if block.type == "tool_use" and block.name == "submit_analysis":
+                    logger.info("Tool use response parsed successfully")
+                    return block.input
+
+            # Fallback: if no tool call found, try text parsing
+            for block in response.content:
+                if hasattr(block, "text"):
+                    return _parse_claude_json(block.text)
+
+            raise ValueError("No tool call or text in Claude response")
+
+        except anthropic.RateLimitError:
+            wait_time = 30 * (retry + 1)
+            logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {retry + 1}/{max_retries}...")
+            await asyncio.sleep(wait_time)
+            if retry == max_retries - 1:
                 raise
 
 
