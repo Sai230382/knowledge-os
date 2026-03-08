@@ -10,7 +10,7 @@ if ENV_FILE.exists():
 
 class Settings:
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
-    claude_model: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+    claude_model: str = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5")
     allowed_origins: str = os.getenv(
         "ALLOWED_ORIGINS",
         "http://localhost:3000"
