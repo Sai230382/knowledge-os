@@ -1,6 +1,8 @@
 import json
 import re
 import logging
+import asyncio
+import time
 import anthropic
 from app.config import settings
 from app.schemas.claude_schemas import AnalysisOutput
@@ -337,43 +339,54 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
 
     logger.info(f"Document size: {len(text):,} chars → {num_chunks} chunk(s)")
 
+    t_start = time.time()
+
     if num_chunks == 1:
         # Single chunk — original simple path
         prompt = _build_chunk_prompt(chunks[0], tables, instructions, 0, 1)
         data = await _call_and_parse(client, SYSTEM_PROMPT, prompt)
+        logger.info(f"Single-chunk analysis done in {time.time() - t_start:.1f}s")
         return AnalysisOutput(**data), 1
 
-    # Multi-chunk analysis
+    # Multi-chunk analysis — run ALL chunks in PARALLEL
     table_groups = _distribute_tables(tables, num_chunks)
-    chunk_results = []
 
-    for i, chunk_text in enumerate(chunks):
-        logger.info(f"Analyzing chunk {i + 1}/{num_chunks} ({len(chunk_text):,} chars)")
+    async def _analyze_chunk(i: int, chunk_text: str) -> dict:
+        t0 = time.time()
+        logger.info(f"Chunk {i + 1}/{num_chunks}: starting ({len(chunk_text):,} chars)")
         prompt = _build_chunk_prompt(
             chunk_text, table_groups[i], instructions, i, num_chunks
         )
         data = await _call_and_parse(client, SYSTEM_PROMPT, prompt)
-        chunk_results.append(data)
+        logger.info(f"Chunk {i + 1}/{num_chunks}: done in {time.time() - t0:.1f}s")
+        return data
+
+    # Fire all chunk analyses simultaneously
+    logger.info(f"Starting parallel analysis of {num_chunks} chunks...")
+    chunk_results = await asyncio.gather(
+        *[_analyze_chunk(i, chunk_text) for i, chunk_text in enumerate(chunks)]
+    )
+    chunk_results = list(chunk_results)
+    logger.info(f"All {num_chunks} chunks analyzed in {time.time() - t_start:.1f}s — now merging")
 
     # Merge all chunk results
-    logger.info(f"Merging {num_chunks} chunk analyses into unified result")
-
-    # If too many chunks, merge in batches to stay within context
+    # If too many chunks, merge in batches (parallel) to stay within context
     while len(chunk_results) > 5:
         logger.info(f"Hierarchical merge: {len(chunk_results)} partial results → batches of 5")
-        merged_batch = []
-        for batch_start in range(0, len(chunk_results), 5):
-            batch = chunk_results[batch_start:batch_start + 5]
+        # Build merge tasks for batches that need merging
+        batches = [chunk_results[i:i + 5] for i in range(0, len(chunk_results), 5)]
+        async def _merge_batch(batch: list[dict]) -> dict:
             if len(batch) == 1:
-                merged_batch.append(batch[0])
-            else:
-                merge_prompt = _build_merge_prompt(batch, instructions)
-                merged_batch.append(await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384))
-        chunk_results = merged_batch
+                return batch[0]
+            merge_prompt = _build_merge_prompt(batch, instructions)
+            return await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
+        chunk_results = list(await asyncio.gather(*[_merge_batch(b) for b in batches]))
 
     # Final merge
+    t_merge = time.time()
     merge_prompt = _build_merge_prompt(chunk_results, instructions)
     data = await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
+    logger.info(f"Final merge done in {time.time() - t_merge:.1f}s — total: {time.time() - t_start:.1f}s")
 
     return AnalysisOutput(**data), num_chunks
 
