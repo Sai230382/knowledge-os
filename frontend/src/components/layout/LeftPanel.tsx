@@ -7,6 +7,15 @@ import ChatInput from "../input/ChatInput";
 import ThemeToggle from "../shared/ThemeToggle";
 import { uploadFiles, analyzeUrl, analyzePath, analyzeText, refineAnalysis } from "@/lib/api";
 import { AnalysisResponse } from "@/lib/types";
+import axios from "axios";
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data?.detail) {
+    return err.response.data.detail;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
 
 interface LeftPanelProps {
   onResult: (result: AnalysisResponse | null) => void;
@@ -93,7 +102,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
       const result = await uploadFiles(files, instructions);
       onResult(result);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to analyze files";
+      const msg = getErrorMessage(err, "Failed to analyze files");
       onError(msg);
     } finally {
       setIsLoading(false);
@@ -107,7 +116,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
       const result = await analyzePath(path, instructions);
       onResult(result);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to analyze path";
+      const msg = getErrorMessage(err, "Failed to analyze path");
       onError(msg);
     } finally {
       setIsLoading(false);
@@ -121,7 +130,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
       const result = await analyzeUrl(url, instructions);
       onResult(result);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to analyze URL";
+      const msg = getErrorMessage(err, "Failed to analyze URL");
       onError(msg);
     } finally {
       setIsLoading(false);
@@ -135,7 +144,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
       const result = await analyzeText(text, instructions);
       onResult(result);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to analyze text";
+      const msg = getErrorMessage(err, "Failed to analyze text");
       onError(msg);
     } finally {
       setIsLoading(false);
@@ -169,7 +178,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
         analysis: updatedAnalysis,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to refine analysis";
+      const msg = getErrorMessage(err, "Failed to refine analysis");
       setQueryHistory((prev) => [...prev, { role: "assistant", text: `Error: ${msg}` }]);
       onError(msg);
     } finally {
