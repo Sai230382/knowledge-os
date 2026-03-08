@@ -1,11 +1,30 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_session, AnalysisJob
 
 router = APIRouter()
+
+
+@router.get("/api/debug/jobs")
+async def debug_recent_jobs(session: AsyncSession = Depends(get_session)):
+    """Debug endpoint: show recent jobs with status (no result data)."""
+    result = await session.execute(
+        select(AnalysisJob).order_by(desc(AnalysisJob.created_at)).limit(10)
+    )
+    jobs = result.scalars().all()
+    return [
+        {
+            "id": j.id[:8],
+            "status": j.status,
+            "error": j.error_message[:200] if j.error_message else None,
+            "created": str(j.created_at),
+            "updated": str(j.updated_at),
+        }
+        for j in jobs
+    ]
 
 
 class JobStatusResponse(BaseModel):
