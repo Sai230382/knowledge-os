@@ -85,7 +85,8 @@ IMPORTANT:
 - related_entities in tribal_knowledge and exceptions MUST reference valid node IDs from the knowledge_graph
 - Every node MUST have a description field
 - If no numeric data exists, set "kpis" to null
-- Respond ONLY with valid JSON, no markdown formatting or code blocks"""
+- Respond ONLY with valid JSON, no markdown formatting or code blocks
+- Use COMPACT JSON (no extra whitespace or indentation) to minimize output size"""
 
 
 MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. You receive multiple partial analyses of a large document (each from a different section/chunk) and merge them into one unified, comprehensive analysis.
@@ -122,14 +123,49 @@ def _repair_json(text: str) -> str:
     # Fix missing commas between key-value pairs ("value"\n  "key":)
     text = re.sub(r'(")\s*\n(\s*"[^"]+":)', r'\1,\n\2', text)
 
-    # Fix unescaped quotes inside strings (common LLM mistake)
-    # This is tricky — only attempt simple cases
-    # Replace straight double quotes inside already-quoted values
-    lines = text.split('\n')
-    fixed_lines = []
-    for line in lines:
-        fixed_lines.append(line)
-    text = '\n'.join(fixed_lines)
+    return text
+
+
+def _close_truncated_json(text: str) -> str:
+    """Try to close truncated JSON by adding missing brackets/braces.
+    When Claude hits max_tokens, the JSON gets cut off mid-stream.
+    This function tries to salvage what we have by closing open structures.
+    """
+    # Strip any trailing incomplete string value (cut mid-string)
+    # Look for the last complete key-value or array item
+    text = text.rstrip()
+
+    # If it ends mid-string, close the string
+    # Count unescaped quotes to check if we're inside a string
+    in_string = False
+    for i, c in enumerate(text):
+        if c == '"' and (i == 0 or text[i - 1] != '\\'):
+            in_string = not in_string
+
+    if in_string:
+        text += '"'
+
+    # Remove any trailing comma
+    text = text.rstrip().rstrip(',')
+
+    # Track what brackets/braces are still open
+    stack = []
+    in_str = False
+    for i, c in enumerate(text):
+        if c == '"' and (i == 0 or text[i - 1] != '\\'):
+            in_str = not in_str
+        if in_str:
+            continue
+        if c in ('{', '['):
+            stack.append(c)
+        elif c == '}' and stack and stack[-1] == '{':
+            stack.pop()
+        elif c == ']' and stack and stack[-1] == '[':
+            stack.pop()
+
+    # Close all open brackets/braces in reverse order
+    for opener in reversed(stack):
+        text += ']' if opener == '[' else '}'
 
     return text
 
@@ -160,8 +196,16 @@ def _parse_claude_json(raw_text: str) -> dict:
     repaired = _repair_json(raw_text)
     try:
         return json.loads(repaired)
+    except json.JSONDecodeError:
+        pass
+
+    # Third try: close truncated JSON (when output hit max_tokens)
+    logger.warning("Attempting truncated JSON recovery...")
+    closed = _close_truncated_json(repaired)
+    try:
+        return json.loads(closed)
     except json.JSONDecodeError as e:
-        logger.error(f"JSON parse failed even after repair: {e}")
+        logger.error(f"JSON parse failed even after repair + truncation fix: {e}")
         logger.error(f"First 500 chars: {raw_text[:500]}")
         logger.error(f"Last 500 chars: {raw_text[-500:]}")
         raise
