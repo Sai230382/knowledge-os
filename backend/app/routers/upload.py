@@ -1,13 +1,13 @@
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import analyze_content
-from app.schemas.responses import AnalysisResponse, FileMetadata
+from app.schemas.responses import FileMetadata
+from app.services.job_service import create_and_run_job
 
 router = APIRouter()
 
 
-@router.post("/api/upload", response_model=AnalysisResponse)
+@router.post("/api/upload")
 async def upload_files(
     files: list[UploadFile] = File(...),
     instructions: Optional[str] = Form(None),
@@ -22,7 +22,7 @@ async def upload_files(
     for file in files:
         try:
             processor = get_processor(file.filename)
-        except ValueError as e:
+        except ValueError:
             raise HTTPException(
                 400,
                 f"Unsupported file: {file.filename}. Supported: {', '.join(SUPPORTED_EXTENSIONS)}",
@@ -43,12 +43,16 @@ async def upload_files(
 
     combined_text = "\n\n".join(all_text)
 
-    analysis, chunks_analyzed = await analyze_content(combined_text, all_tables, instructions)
+    if not combined_text.strip():
+        raise HTTPException(400, "No text could be extracted from the uploaded files")
 
-    return AnalysisResponse(
-        analysis=analysis,
-        metadata=metadata_list,
+    # Start background job — returns immediately
+    job_id = await create_and_run_job(
+        text=combined_text,
+        tables=[t if isinstance(t, dict) else t for t in all_tables],
+        metadata_dicts=[m.model_dump() for m in metadata_list],
         files_processed=len(files),
-        total_text_length=len(combined_text),
-        chunks_analyzed=chunks_analyzed,
+        instructions=instructions,
     )
+
+    return {"job_id": job_id}

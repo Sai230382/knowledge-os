@@ -1,17 +1,18 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import analyze_content, refine_analysis
+from app.services.claude_service import refine_analysis
 from app.services.url_service import download_file
+from app.services.job_service import create_and_run_job
 from app.schemas.responses import (
-    AnalysisResponse, FileMetadata, PathRequest, TextRequest,
+    FileMetadata, PathRequest, TextRequest,
     UrlRequest, RefineRequest, RefineResponse,
 )
 
 router = APIRouter()
 
 
-@router.post("/api/analyze-path", response_model=AnalysisResponse)
+@router.post("/api/analyze-path")
 async def analyze_path(request: PathRequest):
     path = Path(request.path)
 
@@ -52,49 +53,46 @@ async def analyze_path(request: PathRequest):
                 sheet_count=result.metadata.get("sheet_count", 0),
                 slide_count=result.metadata.get("slide_count", 0),
             ))
-        except Exception as e:
-            metadata_list.append(FileMetadata(
-                filename=file_path.name,
-            ))
+        except Exception:
+            metadata_list.append(FileMetadata(filename=file_path.name))
 
     combined_text = "\n\n".join(all_text)
 
     if not combined_text.strip():
         raise HTTPException(400, "No text could be extracted from the provided files")
 
-    analysis, chunks_analyzed = await analyze_content(combined_text, all_tables, request.instructions)
-
-    return AnalysisResponse(
-        analysis=analysis,
-        metadata=metadata_list,
+    job_id = await create_and_run_job(
+        text=combined_text,
+        tables=[t if isinstance(t, dict) else t for t in all_tables],
+        metadata_dicts=[m.model_dump() for m in metadata_list],
         files_processed=len(files),
-        total_text_length=len(combined_text),
-        chunks_analyzed=chunks_analyzed,
+        instructions=request.instructions,
     )
 
+    return {"job_id": job_id}
 
-@router.post("/api/analyze-text", response_model=AnalysisResponse)
+
+@router.post("/api/analyze-text")
 async def analyze_text(request: TextRequest):
     if not request.text.strip():
         raise HTTPException(400, "Text cannot be empty")
 
-    analysis, chunks_analyzed = await analyze_content(request.text, [], request.instructions)
-
-    return AnalysisResponse(
-        analysis=analysis,
-        metadata=[],
+    job_id = await create_and_run_job(
+        text=request.text,
+        tables=[],
+        metadata_dicts=[],
         files_processed=0,
-        total_text_length=len(request.text),
-        chunks_analyzed=chunks_analyzed,
+        instructions=request.instructions,
     )
 
+    return {"job_id": job_id}
 
-@router.post("/api/analyze-url", response_model=AnalysisResponse)
+
+@router.post("/api/analyze-url")
 async def analyze_url(request: UrlRequest):
     if not request.url.strip():
         raise HTTPException(400, "URL cannot be empty")
 
-    # Download the file from the URL
     try:
         file_bytes, filename = await download_file(request.url)
     except ValueError as e:
@@ -106,7 +104,6 @@ async def analyze_url(request: UrlRequest):
             "Make sure the URL is accessible and the file is shared publicly.",
         )
 
-    # Process the downloaded file
     try:
         processor = get_processor(filename)
     except ValueError:
@@ -132,15 +129,15 @@ async def analyze_url(request: UrlRequest):
     if not combined_text.strip():
         raise HTTPException(400, "No text could be extracted from the downloaded file")
 
-    analysis, chunks_analyzed = await analyze_content(combined_text, result.tables, request.instructions)
-
-    return AnalysisResponse(
-        analysis=analysis,
-        metadata=[metadata],
+    job_id = await create_and_run_job(
+        text=combined_text,
+        tables=[t if isinstance(t, dict) else t for t in result.tables],
+        metadata_dicts=[metadata.model_dump()],
         files_processed=1,
-        total_text_length=len(combined_text),
-        chunks_analyzed=chunks_analyzed,
+        instructions=request.instructions,
     )
+
+    return {"job_id": job_id}
 
 
 @router.post("/api/refine", response_model=RefineResponse)

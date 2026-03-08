@@ -76,6 +76,21 @@ class ProjectModel(Base):
     )
 
 
+class AnalysisJob(Base):
+    __tablename__ = "analysis_jobs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="processing")  # processing, complete, error
+    result_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
 def hash_passphrase(passphrase: str) -> str:
     """Deterministic hash so same passphrase always finds the same workspace."""
     return hashlib.sha256(passphrase.strip().encode()).hexdigest()
@@ -91,3 +106,13 @@ async def get_session():
     maker = _get_session_maker()
     async with maker() as session:
         yield session
+
+
+async def get_session_context():
+    """Standalone async context manager for use in background tasks."""
+    maker = _get_session_maker()
+    session = maker()
+    try:
+        yield session
+    finally:
+        await session.close()
