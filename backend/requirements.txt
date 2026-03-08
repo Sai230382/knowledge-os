@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-docx
+python-pptx
+openpyxl
+pdfplumber
+anthropic
+pydantic-settings
