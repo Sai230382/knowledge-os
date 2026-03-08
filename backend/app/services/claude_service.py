@@ -77,16 +77,18 @@ Response JSON Schema (respond ONLY with this JSON, no other text):
   ]
 }
 
-IMPORTANT:
-- All entity IDs in graphs must be unique lowercase slugs (e.g., "john-smith", "crm-system")
+IMPORTANT OUTPUT RULES:
+- BE CONCISE: Keep descriptions to 1-2 short sentences max
+- LIMIT OUTPUT: Max 5 industry patterns, 5 client patterns, 5 tribal knowledge, 5 exceptions, 10 KPIs
+- Knowledge graph: max 20 most important nodes, max 30 edges
+- Context graph: max 15 most important nodes, max 20 edges
+- All entity IDs must be unique lowercase slugs
 - Every edge must reference valid node IDs that exist in the nodes array
-- Be thorough: extract ALL entities and relationships you can find
-- Knowledge graph should map ALL entities in detail; context graph should show the most important 15-25 entities across ALL types as a 360° executive overview
-- related_entities in tribal_knowledge and exceptions MUST reference valid node IDs from the knowledge_graph
+- related_entities must reference valid knowledge_graph node IDs
 - Every node MUST have a description field
 - If no numeric data exists, set "kpis" to null
 - Respond ONLY with valid JSON, no markdown formatting or code blocks
-- Use COMPACT JSON (no extra whitespace or indentation) to minimize output size"""
+- Use COMPACT JSON (no whitespace/indentation) to minimize output size"""
 
 
 MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. You receive multiple partial analyses of a large document (each from a different section/chunk) and merge them into one unified, comprehensive analysis.
