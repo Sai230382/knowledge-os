@@ -59,13 +59,14 @@ async def analyze_path(request: PathRequest):
     if not combined_text.strip():
         raise HTTPException(400, "No text could be extracted from the provided files")
 
-    analysis = await analyze_content(combined_text, all_tables, request.instructions)
+    analysis, chunks_analyzed = await analyze_content(combined_text, all_tables, request.instructions)
 
     return AnalysisResponse(
         analysis=analysis,
         metadata=metadata_list,
         files_processed=len(files),
         total_text_length=len(combined_text),
+        chunks_analyzed=chunks_analyzed,
     )
 
 
@@ -74,13 +75,14 @@ async def analyze_text(request: TextRequest):
     if not request.text.strip():
         raise HTTPException(400, "Text cannot be empty")
 
-    analysis = await analyze_content(request.text, [], request.instructions)
+    analysis, chunks_analyzed = await analyze_content(request.text, [], request.instructions)
 
     return AnalysisResponse(
         analysis=analysis,
         metadata=[],
         files_processed=0,
         total_text_length=len(request.text),
+        chunks_analyzed=chunks_analyzed,
     )
 
 
@@ -127,11 +129,12 @@ async def analyze_url(request: UrlRequest):
     if not combined_text.strip():
         raise HTTPException(400, "No text could be extracted from the downloaded file")
 
-    analysis = await analyze_content(combined_text, result.tables, request.instructions)
+    analysis, chunks_analyzed = await analyze_content(combined_text, result.tables, request.instructions)
 
     return AnalysisResponse(
         analysis=analysis,
         metadata=[metadata],
         files_processed=1,
         total_text_length=len(combined_text),
+        chunks_analyzed=chunks_analyzed,
     )

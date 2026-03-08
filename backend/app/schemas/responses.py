@@ -16,6 +16,7 @@ class AnalysisResponse(BaseModel):
     metadata: list[FileMetadata]
     files_processed: int
     total_text_length: int
+    chunks_analyzed: int = 1
 
 
 class PathRequest(BaseModel):

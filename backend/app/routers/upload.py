@@ -43,11 +43,12 @@ async def upload_files(
 
     combined_text = "\n\n".join(all_text)
 
-    analysis = await analyze_content(combined_text, all_tables, instructions)
+    analysis, chunks_analyzed = await analyze_content(combined_text, all_tables, instructions)
 
     return AnalysisResponse(
         analysis=analysis,
         metadata=metadata_list,
         files_processed=len(files),
         total_text_length=len(combined_text),
+        chunks_analyzed=chunks_analyzed,
     )

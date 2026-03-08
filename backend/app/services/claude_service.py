@@ -1,8 +1,16 @@
 import json
 import re
+import logging
 import anthropic
 from app.config import settings
 from app.schemas.claude_schemas import AnalysisOutput
+
+logger = logging.getLogger(__name__)
+
+# Max chars per chunk sent to Claude (~80K chars ≈ 20K tokens, well within context)
+CHUNK_SIZE = 80000
+# Max tables per chunk
+TABLES_PER_CHUNK = 15
 
 SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. You analyze business documents and extract structured knowledge. You always respond in valid JSON matching the exact schema provided.
 
@@ -73,45 +81,31 @@ IMPORTANT:
 - Respond ONLY with valid JSON, no markdown formatting or code blocks"""
 
 
-def build_user_prompt(text: str, tables: list[dict], instructions: str | None = None) -> str:
-    parts = ["Analyze the following document content and extract structured knowledge.\n"]
+MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. You receive multiple partial analyses of a large document (each from a different section/chunk) and merge them into one unified, comprehensive analysis.
 
-    if instructions:
-        parts.append("## User Instructions / Focus Areas:\n")
-        parts.append(instructions)
-        parts.append("\nPlease pay special attention to the instructions above when analyzing the content.\n")
+Your job:
+1. MERGE all industry patterns, client patterns, tribal knowledge, and exceptions — deduplicate similar items, combine evidence, and keep the best version of each.
+2. MERGE knowledge graphs — deduplicate nodes by their ID or similar names, merge edges, and ensure all edges reference valid node IDs.
+3. MERGE context graphs — same deduplication and merging rules.
+4. MERGE KPIs — deduplicate metrics, pick the most accurate/recent value, and combine notes.
+5. Where multiple chunks found the same pattern/entity, INCREASE the confidence level and merge the evidence lists.
+6. Create cross-chunk connections — if an entity in chunk 1 relates to an entity in chunk 3, add that edge.
 
-    parts.append("## Document Text:\n")
-    parts.append(text[:100000])  # Limit to ~100k chars to stay within context
+Respond with the SAME JSON schema as the individual analyses. Respond ONLY with valid JSON, no markdown formatting or code blocks.
 
-    if tables:
-        parts.append("\n\n## Tabular Data:\n")
-        parts.append(json.dumps(tables[:20], indent=2))  # Limit tables
-    else:
-        parts.append("\n\n## Tabular Data:\nNo tabular data present.")
-
-    parts.append(
-        "\n\nRespond with the JSON structure defined in your instructions. "
-        "Ensure all entity IDs in the knowledge graph are unique lowercase slugs. "
-        "Ensure every edge references valid node IDs. "
-        "Ensure related_entities in tribal_knowledge and exceptions reference valid knowledge_graph node IDs."
-    )
-    return "\n".join(parts)
+IMPORTANT:
+- All entity IDs in graphs must be unique lowercase slugs
+- Every edge must reference valid node IDs that exist in the nodes array
+- Deduplicate aggressively — the final result should be clean and non-repetitive
+- related_entities in tribal_knowledge and exceptions MUST reference valid node IDs from the merged knowledge_graph
+- Every node MUST have a description field
+- If no numeric data exists across any chunk, set "kpis" to null"""
 
 
-async def analyze_content(text: str, tables: list[dict], instructions: str | None = None) -> AnalysisOutput:
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+def _parse_claude_json(raw_text: str) -> dict:
+    """Parse JSON from Claude's response, handling markdown fences and surrounding text."""
+    raw_text = raw_text.strip()
 
-    user_prompt = build_user_prompt(text, tables, instructions)
-
-    response = client.messages.create(
-        model="claude-4-sonnet-20250514",
-        max_tokens=8192,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-
-    raw_text = response.content[0].text.strip()
     # Strip markdown code fences if present
     if raw_text.startswith("```"):
         lines = raw_text.split("\n")
@@ -124,5 +118,200 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     if json_match:
         raw_text = json_match.group(0)
 
-    data = json.loads(raw_text)
-    return AnalysisOutput(**data)
+    return json.loads(raw_text)
+
+
+def _call_claude(client: anthropic.Anthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> str:
+    """Call Claude API and return raw text response."""
+    response = client.messages.create(
+        model="claude-4-sonnet-20250514",
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    return response.content[0].text.strip()
+
+
+def _split_text_into_chunks(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
+    """
+    Split text into chunks, trying to break at natural boundaries (sheet dividers, paragraphs).
+    """
+    if len(text) <= chunk_size:
+        return [text]
+
+    chunks = []
+    remaining = text
+
+    while remaining:
+        if len(remaining) <= chunk_size:
+            chunks.append(remaining)
+            break
+
+        # Try to find a natural break point near the chunk_size limit
+        candidate = remaining[:chunk_size]
+
+        # Prefer breaking at sheet/file boundaries (--- filename ---)
+        sheet_break = candidate.rfind("\n--- ")
+        if sheet_break > chunk_size * 0.3:
+            chunks.append(remaining[:sheet_break].rstrip())
+            remaining = remaining[sheet_break:].lstrip()
+            continue
+
+        # Next preference: double newline (paragraph boundary)
+        para_break = candidate.rfind("\n\n")
+        if para_break > chunk_size * 0.3:
+            chunks.append(remaining[:para_break].rstrip())
+            remaining = remaining[para_break:].lstrip()
+            continue
+
+        # Fall back to single newline
+        line_break = candidate.rfind("\n")
+        if line_break > chunk_size * 0.3:
+            chunks.append(remaining[:line_break].rstrip())
+            remaining = remaining[line_break:].lstrip()
+            continue
+
+        # Hard break at chunk_size
+        chunks.append(remaining[:chunk_size])
+        remaining = remaining[chunk_size:]
+
+    return [c for c in chunks if c.strip()]
+
+
+def _distribute_tables(tables: list[dict], num_chunks: int) -> list[list[dict]]:
+    """Distribute tables evenly across chunks."""
+    if not tables:
+        return [[] for _ in range(num_chunks)]
+
+    result = [[] for _ in range(num_chunks)]
+    for i, table in enumerate(tables):
+        result[i % num_chunks].append(table)
+    return result
+
+
+def _build_chunk_prompt(
+    text: str,
+    tables: list[dict],
+    instructions: str | None,
+    chunk_index: int,
+    total_chunks: int,
+) -> str:
+    """Build the prompt for analyzing a single chunk."""
+    parts = []
+
+    if total_chunks > 1:
+        parts.append(
+            f"You are analyzing SECTION {chunk_index + 1} of {total_chunks} of a large document. "
+            f"Extract all knowledge from THIS section thoroughly. "
+            f"Other sections will be analyzed separately and merged later.\n"
+        )
+
+    parts.append("Analyze the following document content and extract structured knowledge.\n")
+
+    if instructions:
+        parts.append("## User Instructions / Focus Areas:\n")
+        parts.append(instructions)
+        parts.append("\nPlease pay special attention to the instructions above when analyzing the content.\n")
+
+    parts.append("## Document Text:\n")
+    parts.append(text)
+
+    if tables:
+        parts.append("\n\n## Tabular Data:\n")
+        parts.append(json.dumps(tables[:TABLES_PER_CHUNK], indent=2))
+    else:
+        parts.append("\n\n## Tabular Data:\nNo tabular data present in this section.")
+
+    parts.append(
+        "\n\nRespond with the JSON structure defined in your instructions. "
+        "Ensure all entity IDs in the knowledge graph are unique lowercase slugs. "
+        "Ensure every edge references valid node IDs. "
+        "Ensure related_entities in tribal_knowledge and exceptions reference valid knowledge_graph node IDs."
+    )
+    return "\n".join(parts)
+
+
+def _build_merge_prompt(chunk_results: list[dict], instructions: str | None) -> str:
+    """Build the prompt for merging multiple chunk analyses."""
+    parts = [
+        f"You are merging {len(chunk_results)} partial analyses of a large document into one unified result.\n"
+    ]
+
+    if instructions:
+        parts.append("## Original User Instructions (for context):\n")
+        parts.append(instructions)
+        parts.append("\n")
+
+    for i, result in enumerate(chunk_results):
+        parts.append(f"\n## Analysis from Section {i + 1} of {len(chunk_results)}:\n")
+        parts.append(json.dumps(result, indent=1))
+
+    parts.append(
+        "\n\n## Your Task:\n"
+        "Merge ALL the above analyses into ONE unified result with the same JSON schema. "
+        "Deduplicate patterns, entities, and KPIs. Merge evidence lists. "
+        "Create cross-section entity relationships where applicable. "
+        "The final result should be comprehensive yet clean — no duplicates.\n"
+        "Respond ONLY with valid JSON."
+    )
+    return "\n".join(parts)
+
+
+async def analyze_content(text: str, tables: list[dict], instructions: str | None = None) -> tuple[AnalysisOutput, int]:
+    """
+    Analyze content with automatic chunking for large documents.
+    - Small docs (<=80K chars): single pass analysis
+    - Large docs: chunk → analyze each → merge results
+    Returns (analysis_output, num_chunks_analyzed)
+    """
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+    # Split text into chunks
+    chunks = _split_text_into_chunks(text)
+    num_chunks = len(chunks)
+
+    logger.info(f"Document size: {len(text):,} chars → {num_chunks} chunk(s)")
+
+    if num_chunks == 1:
+        # Single chunk — original simple path
+        prompt = _build_chunk_prompt(chunks[0], tables, instructions, 0, 1)
+        raw = _call_claude(client, SYSTEM_PROMPT, prompt)
+        data = _parse_claude_json(raw)
+        return AnalysisOutput(**data), 1
+
+    # Multi-chunk analysis
+    table_groups = _distribute_tables(tables, num_chunks)
+    chunk_results = []
+
+    for i, chunk_text in enumerate(chunks):
+        logger.info(f"Analyzing chunk {i + 1}/{num_chunks} ({len(chunk_text):,} chars)")
+        prompt = _build_chunk_prompt(
+            chunk_text, table_groups[i], instructions, i, num_chunks
+        )
+        raw = _call_claude(client, SYSTEM_PROMPT, prompt)
+        data = _parse_claude_json(raw)
+        chunk_results.append(data)
+
+    # Merge all chunk results
+    logger.info(f"Merging {num_chunks} chunk analyses into unified result")
+
+    # If too many chunks, merge in batches to stay within context
+    while len(chunk_results) > 5:
+        logger.info(f"Hierarchical merge: {len(chunk_results)} partial results → batches of 5")
+        merged_batch = []
+        for batch_start in range(0, len(chunk_results), 5):
+            batch = chunk_results[batch_start:batch_start + 5]
+            if len(batch) == 1:
+                merged_batch.append(batch[0])
+            else:
+                merge_prompt = _build_merge_prompt(batch, instructions)
+                raw = _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
+                merged_batch.append(_parse_claude_json(raw))
+        chunk_results = merged_batch
+
+    # Final merge
+    merge_prompt = _build_merge_prompt(chunk_results, instructions)
+    raw = _call_claude(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
+    data = _parse_claude_json(raw)
+
+    return AnalysisOutput(**data), num_chunks

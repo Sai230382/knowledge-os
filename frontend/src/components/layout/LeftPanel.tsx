@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FileUploader from "../input/FileUploader";
 import UrlInput from "../input/UrlInput";
 import PathInput from "../input/PathInput";
@@ -13,6 +13,67 @@ interface LeftPanelProps {
   onError: (error: string) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+}
+
+const PROGRESS_STAGES = [
+  "Uploading and extracting document content...",
+  "Splitting into analyzable sections...",
+  "Analyzing section with Claude AI...",
+  "Extracting patterns and entities...",
+  "Building knowledge graph...",
+  "Identifying KPIs and trends...",
+  "Merging analysis from all sections...",
+  "Synthesizing final insights...",
+  "Almost there — finalizing results...",
+];
+
+function AnalysisProgress() {
+  const [stageIndex, setStageIndex] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const stageTimer = setInterval(() => {
+      setStageIndex((prev) => (prev < PROGRESS_STAGES.length - 1 ? prev + 1 : prev));
+    }, 12000); // Advance stage every 12 seconds
+
+    const elapsedTimer = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+
+    return () => {
+      clearInterval(stageTimer);
+      clearInterval(elapsedTimer);
+    };
+  }, []);
+
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <svg className="animate-spin w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+          {PROGRESS_STAGES[stageIndex]}
+        </span>
+      </div>
+      <div className="flex items-center justify-between text-[11px] text-blue-500 dark:text-blue-400">
+        <span>Elapsed: {timeStr}</span>
+        <span>Large files may take 2-5 minutes</span>
+      </div>
+      {/* Progress bar animation */}
+      <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-1.5 overflow-hidden">
+        <div
+          className="bg-blue-600 dark:bg-blue-400 h-1.5 rounded-full transition-all duration-1000 ease-linear"
+          style={{ width: `${Math.min(((stageIndex + 1) / PROGRESS_STAGES.length) * 100, 95)}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }: LeftPanelProps) {
@@ -140,15 +201,7 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading }
         <ChatInput onSubmit={handleText} isLoading={isLoading} />
       </div>
 
-      {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-3 py-2 rounded-lg">
-          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Analyzing with Claude AI...
-        </div>
-      )}
+      {isLoading && <AnalysisProgress />}
     </div>
   );
 }
