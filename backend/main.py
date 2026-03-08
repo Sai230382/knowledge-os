@@ -1,15 +1,23 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers import upload, analyze, projects
-from app.database import init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create database tables on startup
-    await init_db()
+    if os.getenv("DATABASE_URL"):
+        try:
+            from app.database import init_db
+            await init_db()
+            print("Database tables created successfully")
+        except Exception as e:
+            print(f"Warning: Database init failed: {e}")
+    else:
+        print("Warning: DATABASE_URL not set — project persistence disabled")
     yield
 
 

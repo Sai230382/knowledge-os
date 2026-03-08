@@ -15,16 +15,33 @@ def get_database_url() -> str:
             "DATABASE_URL environment variable is not set. "
             "Add a PostgreSQL database to your Railway project."
         )
-    # Railway gives postgres:// but SQLAlchemy needs postgresql+asyncpg://
+    # Railway gives postgres:// but SQLAlchemy async needs postgresql+asyncpg://
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif url.startswith("postgresql://"):
+    elif url.startswith("postgresql://") and "+asyncpg" not in url:
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url
 
 
-engine = create_async_engine(get_database_url(), echo=False)
-async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+# Lazy engine — only created when first needed
+_engine = None
+_session_maker = None
+
+
+def _get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_async_engine(get_database_url(), echo=False, pool_pre_ping=True)
+    return _engine
+
+
+def _get_session_maker():
+    global _session_maker
+    if _session_maker is None:
+        _session_maker = async_sessionmaker(
+            _get_engine(), class_=AsyncSession, expire_on_commit=False
+        )
+    return _session_maker
 
 
 class Base(DeclarativeBase):
@@ -65,10 +82,12 @@ def hash_passphrase(passphrase: str) -> str:
 
 
 async def init_db():
+    engine = _get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
 async def get_session():
-    async with async_session_maker() as session:
+    maker = _get_session_maker()
+    async with maker() as session:
         yield session
