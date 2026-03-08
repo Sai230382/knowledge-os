@@ -167,10 +167,11 @@ def _parse_claude_json(raw_text: str) -> dict:
         raise
 
 
-async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> str:
+async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> str:
     """Call Claude API asynchronously and return raw text response.
     Uses prompt caching on the system prompt to reduce cost by ~90% on repeated calls.
     """
+    t0 = time.time()
     response = await client.messages.create(
         model=settings.claude_model,
         max_tokens=max_tokens,
@@ -181,10 +182,17 @@ async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_promp
         }],
         messages=[{"role": "user", "content": user_prompt}],
     )
+    logger.info(
+        f"Claude API call: {time.time() - t0:.1f}s, "
+        f"in={response.usage.input_tokens} out={response.usage.output_tokens} "
+        f"stop={response.stop_reason}"
+    )
+    if response.stop_reason == "max_tokens":
+        logger.warning(f"Response truncated at {max_tokens} tokens! Output may be incomplete.")
     return response.content[0].text.strip()
 
 
-async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 8192) -> dict:
+async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> dict:
     """Call Claude and parse JSON response, with one automatic retry on parse failure."""
     for attempt in range(2):
         raw = await _call_claude(client, system, user_prompt, max_tokens)
@@ -331,7 +339,10 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     - Large docs: chunk → analyze each → merge results
     Returns (analysis_output, num_chunks_analyzed)
     """
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(
+        api_key=settings.anthropic_api_key,
+        timeout=300.0,  # 5 min max per API call
+    )
 
     # Split text into chunks
     chunks = _split_text_into_chunks(text)
@@ -420,7 +431,7 @@ async def refine_analysis(
     Refine/query an existing analysis based on user input.
     The user can ask questions, request more detail, add connections, etc.
     """
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
 
     # Truncate the current analysis if it's too large
     analysis_json = json.dumps(current_analysis, indent=1)
@@ -464,7 +475,7 @@ async def accumulate_analysis(
     """
     Merge a new analysis into an existing one, accumulating knowledge.
     """
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
 
     existing_json = json.dumps(existing_analysis, indent=1)
     new_json = json.dumps(new_analysis, indent=1)
