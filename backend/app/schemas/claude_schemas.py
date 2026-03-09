@@ -72,10 +72,10 @@ class KPI(BaseModel):
 
 
 class AnalysisOutput(BaseModel):
-    industry_patterns: list[IndustryPattern]
-    client_patterns: list[ClientPattern]
-    tribal_knowledge: list[TribalKnowledge]
-    exceptions: list[ExceptionItem]
-    knowledge_graph: KnowledgeGraphData
-    context_graph: KnowledgeGraphData
+    industry_patterns: list[IndustryPattern] = []
+    client_patterns: list[ClientPattern] = []
+    tribal_knowledge: list[TribalKnowledge] = []
+    exceptions: list[ExceptionItem] = []
+    knowledge_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
+    context_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
     kpis: Optional[list[KPI]] = None
