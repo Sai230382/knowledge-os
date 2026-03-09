@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Contextus",
-  description: "Extract patterns, KPIs, and knowledge graphs from your documents",
+  description: "Extract patterns, tribal knowledge, and intelligence from your documents",
 };
 
 export default function RootLayout({

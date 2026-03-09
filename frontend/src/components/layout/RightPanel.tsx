@@ -30,7 +30,7 @@ export default function RightPanel({ result, error }: RightPanelProps) {
           </div>
           <h3 className="text-slate-600 dark:text-slate-300 font-medium">Ready to analyze</h3>
           <p className="text-slate-400 dark:text-slate-500 text-sm mt-2">
-            Upload files, provide a path, or paste text to extract patterns, KPIs, and knowledge graphs
+            Upload files, provide a path, or paste text to extract patterns, tribal knowledge, and intelligence
           </p>
         </div>
       </div>

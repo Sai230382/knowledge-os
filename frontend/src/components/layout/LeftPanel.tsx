@@ -31,7 +31,7 @@ const PROGRESS_STAGES = [
   "Analyzing section with Claude AI...",
   "Extracting patterns and entities...",
   "Building knowledge graph...",
-  "Identifying KPIs and trends...",
+  "Identifying gaps and patterns...",
   "Merging analysis from all sections...",
   "Synthesizing final insights...",
   "Almost there — finalizing results...",
@@ -163,8 +163,8 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
 
       const oldNodes = currentResult.analysis.knowledge_graph.nodes.length;
       const newNodes = updatedAnalysis.knowledge_graph?.nodes?.length || 0;
-      const oldPatterns = currentResult.analysis.industry_patterns.length + currentResult.analysis.client_patterns.length;
-      const newPatterns = (updatedAnalysis.industry_patterns?.length || 0) + (updatedAnalysis.client_patterns?.length || 0);
+      const oldPatterns = currentResult.analysis.industry_patterns.length + (currentResult.analysis.process_variations?.length || 0);
+      const newPatterns = (updatedAnalysis.industry_patterns?.length || 0) + (updatedAnalysis.process_variations?.length || 0);
 
       // Safety check: if refine returned empty/broken results, keep the original
       if (newNodes === 0 && oldNodes > 0) {
@@ -276,12 +276,12 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="e.g. Focus on Sheet3 and Revenue tab. Look for KPI trends, client patterns, and exceptions. Ignore the raw data sheets."
+                placeholder="e.g. Focus on Sheet3 and Revenue tab. Look for process gaps, tribal knowledge, and exceptions. Ignore the raw data sheets."
                 rows={3}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
               />
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                Guide Claude on what to focus on — specific sheets, topics, KPIs, or areas to ignore.
+                Guide Claude on what to focus on — specific sheets, topics, processes, or areas to ignore.
               </p>
             </div>
           )}

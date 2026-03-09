@@ -9,11 +9,11 @@ class IndustryPattern(BaseModel):
     evidence: list[str] = []
 
 
-class ClientPattern(BaseModel):
+class ProcessVariation(BaseModel):
     title: str
     description: str
-    frequency: str = ""
-    business_impact: str = ""
+    trigger: str = ""
+    impact: str = ""
 
 
 class TribalKnowledge(BaseModel):
@@ -32,6 +32,22 @@ class ExceptionItem(BaseModel):
     related_entities: list[str] = []
 
 
+class GapAnalysis(BaseModel):
+    title: str
+    description: str
+    gap_type: str = ""  # process_gap, knowledge_gap, technology_gap, ownership_gap
+    risk_level: str = "medium"
+    recommendation: str = ""
+
+
+class Recommendation(BaseModel):
+    title: str
+    description: str
+    priority: str = "medium"
+    effort: str = ""
+    related_entities: list[str] = []
+
+
 class GraphNode(BaseModel):
     id: str
     label: str
@@ -46,23 +62,30 @@ class GraphEdge(BaseModel):
     strength: float = 0.5
 
 
+class ContextEdge(BaseModel):
+    source: str
+    target: str
+    label: str = ""
+    context_type: str = ""  # tribal_knowledge, exception, hidden_pattern, workaround
+    strength: float = 0.7
+
+
 class KnowledgeGraphData(BaseModel):
     nodes: list[GraphNode] = []
     edges: list[GraphEdge] = []
 
 
-class KPI(BaseModel):
-    metric: str
-    value: str
-    trend: str = "stable"
-    note: str = ""
+class ContextGraphData(BaseModel):
+    nodes: list[GraphNode] = []
+    edges: list[ContextEdge] = []
 
 
 class AnalysisOutput(BaseModel):
     industry_patterns: list[IndustryPattern] = []
-    client_patterns: list[ClientPattern] = []
+    process_variations: list[ProcessVariation] = []
     tribal_knowledge: list[TribalKnowledge] = []
     exceptions: list[ExceptionItem] = []
     knowledge_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
-    context_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
-    kpis: Optional[list[KPI]] = None
+    context_graph: ContextGraphData = ContextGraphData(nodes=[], edges=[])
+    gap_analysis: list[GapAnalysis] = []
+    recommendations: list[Recommendation] = []

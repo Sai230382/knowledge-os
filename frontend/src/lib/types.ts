@@ -5,11 +5,11 @@ export interface IndustryPattern {
   evidence: string[];
 }
 
-export interface ClientPattern {
+export interface ProcessVariation {
   title: string;
   description: string;
-  frequency: string;
-  business_impact: string;
+  trigger: string;
+  impact: string;
 }
 
 export interface TribalKnowledge {
@@ -25,6 +25,22 @@ export interface ExceptionItem {
   description: string;
   trigger: string;
   handling: string;
+  related_entities: string[];
+}
+
+export interface GapAnalysis {
+  title: string;
+  description: string;
+  gap_type: string;
+  risk_level: "high" | "medium" | "low";
+  recommendation: string;
+}
+
+export interface Recommendation {
+  title: string;
+  description: string;
+  priority: "high" | "medium" | "low";
+  effort: string;
   related_entities: string[];
 }
 
@@ -46,26 +62,28 @@ export interface GraphEdge {
   strength: number;
 }
 
+export interface ContextEdge extends GraphEdge {
+  context_type?: string;
+}
+
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
 }
 
-export interface KPI {
-  metric: string;
-  value: string;
-  trend: "up" | "down" | "stable";
-  note: string;
+export interface ContextGraphData extends GraphData {
+  edges: ContextEdge[];
 }
 
 export interface AnalysisOutput {
   industry_patterns: IndustryPattern[];
-  client_patterns: ClientPattern[];
+  process_variations: ProcessVariation[];
   tribal_knowledge: TribalKnowledge[];
   exceptions: ExceptionItem[];
+  gap_analysis: GapAnalysis[];
+  recommendations: Recommendation[];
   knowledge_graph: GraphData;
-  context_graph: GraphData;
-  kpis: KPI[] | null;
+  context_graph: ContextGraphData;
 }
 
 export interface FileMetadata {

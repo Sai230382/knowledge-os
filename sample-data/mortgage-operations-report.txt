@@ -1,354 +1,504 @@
 ═══════════════════════════════════════════════════════════════════════
-                   PACIFIC COAST MORTGAGE GROUP
-              OPERATIONS & PERFORMANCE REVIEW — Q4 2025
+              MORTGAGE OPERATIONS — END-TO-END VALUE CHAIN
+              Process, Technology & Operational Knowledge Base
 ═══════════════════════════════════════════════════════════════════════
 
-EXECUTIVE SUMMARY
-─────────────────
-Pacific Coast Mortgage Group processed 4,287 loan applications in Q4 2025,
-representing $1.42B in total loan volume. Net funded volume was $1.18B across
-3,614 closed loans. The average loan size increased 8.3% to $326,500, driven
-primarily by jumbo and non-QM product growth. Our pull-through rate improved
-from 72% to 84.3% following the implementation of the automated pre-qualification
-engine developed by the technology team under CTO Raj Mehta.
+OVERVIEW
+─────────
+This document describes the full mortgage lifecycle from loan origination
+through servicing and post-closing. It covers the key roles involved,
+technology systems used, process workflows, and operational knowledge
+that teams have accumulated — including undocumented workarounds and
+exception-handling practices.
 
-The company operates across 14 branch offices in California, Oregon, Washington,
-and Arizona. Our wholesale channel contributed 38% of total volume while retail
-represented 62%. The correspondent lending division, launched in Q3 under
-VP Sarah Chen, is still in pilot phase with $42M in volume.
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 1: ORGANIZATIONAL STRUCTURE & KEY PERSONNEL
+1. LOAN ORIGINATION
 ────────────────────────────────────────────────────────────────────────
 
-CEO: Michael Torres — 22 years in mortgage banking, former SVP at Wells Fargo
-  Home Lending. Drives the strategic vision of "Technology-First Lending."
+LEAD CAPTURE & PRE-QUALIFICATION
+  Lead sources typically include direct web inquiries, aggregator leads
+  (Zillow, LendingTree), realtor referral networks, and past borrower
+  referrals. Leads are scored in the CRM based on estimated credit tier,
+  property location, and requested loan amount. High-priority leads are
+  routed to Senior Loan Officers within minutes.
 
-COO: Patricia Huang — Manages day-to-day operations across all channels.
-  Directly oversees processing, underwriting, closing, and post-closing.
-  Key initiative: "Zero Touch Processing" aimed at automating 70% of
-  file touches by end of 2026.
+  Pre-qualification involves a soft credit pull through CreditXpert and
+  a preliminary AUS (Automated Underwriting System) run through Desktop
+  Underwriter (DU) to give the borrower an early eligibility signal.
 
-CTO: Raj Mehta — Built the proprietary LoanFlow platform that integrates
-  with Encompass LOS, DU/LP AUS engines, and third-party verification
-  services. His team of 12 engineers maintains the tech stack.
+  ROLES INVOLVED: Loan Officer, Loan Officer Assistant, Branch Manager
 
-Chief Compliance Officer: David Kim — Former CFPB examiner. Manages regulatory
-  compliance for TILA, RESPA, ECOA, HMDA, and state-specific requirements.
-  Recently implemented the Compliance Sentinel automated monitoring system.
+APPLICATION & INITIAL DISCLOSURES
+  The borrower completes a full 1003 Uniform Residential Loan Application
+  either through the lender's borrower portal or in person. The system
+  auto-generates the initial Loan Estimate (LE) and required TILA
+  disclosures within 3 business days per TRID regulations.
 
-VP of Sales: Jennifer Walsh — Manages 86 loan officers across retail branches.
-  Implemented the "Speed to Lead" program reducing initial contact time
-  from 4.2 hours to 18 minutes.
+  TRIBAL KNOWLEDGE: If the Loan Estimate needs to be regenerated after
+  a program change within the first 3 business days, it resets the TRID
+  disclosure clock. This is not documented in most compliance manuals
+  but has been confirmed through regulatory counsel. Processing teams
+  rely on this workaround to buy time when borrowers change loan programs
+  early in the process.
 
-VP of Underwriting: Thomas Rodriguez — Manages a team of 24 underwriters.
-  Avg underwriter handles 8-10 files per day. Created the "Clear to Close
-  Express" program for low-risk files (LTV < 70%, FICO > 760, W-2 income).
+  TECHNOLOGY: Encompass LOS (ICE Mortgage Technology) handles the 1003,
+  fee management, and disclosure generation. The borrower portal is
+  typically a proprietary or vendor-supplied system integrated via API.
 
-VP of Wholesale: Amanda Foster — Manages relationships with 340 broker
-  partners. Oversees broker approvals, comp plan management, and wholesale
-  pricing engine.
-
-VP of Correspondent: Sarah Chen — Recently hired from Pennymac. Building
-  out the correspondent division with a target of $500M annual volume
-  by 2027.
-
-Head of Secondary Marketing: James Park — Manages loan pricing, lock desk,
-  hedge strategy, and investor relationships. Key investors: Fannie Mae,
-  Freddie Mac, Ginnie Mae, JP Morgan, Wells Fargo, PennyMac.
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 2: LOAN ORIGINATION PROCESS
+2. PROCESSING
 ────────────────────────────────────────────────────────────────────────
 
-STEP 1 — LEAD CAPTURE & PRE-QUALIFICATION
-  Sources: Direct web (32%), Zillow/LendingTree leads (24%), Realtor
-  referrals (28%), Past client referrals (16%)
+Once the application is submitted, the Loan Processor takes over. Their
+job is to assemble a complete loan file for underwriting review.
 
-  The LoanFlow CRM automatically scores incoming leads using a proprietary
-  algorithm that factors in credit tier estimates, property location, and
-  loan amount. High-priority leads are routed to senior LOs within 5 minutes.
+TASKS PERFORMED BY PROCESSOR:
+  - Order appraisal through an Appraisal Management Company (AMC)
+  - Order title search and title insurance commitment
+  - Verify employment (VOE) — automated via The Work Number (Equifax)
+    for W-2 borrowers; manual verification required for self-employed
+  - Verify assets/deposits (VOD) via bank statement review or asset
+    verification services like Plaid or Finicity
+  - Order tax transcripts (IRS 4506-C) to validate reported income
+  - Order homeowner's insurance (HOI) binder
+  - Collect any missing borrower documentation
 
-  Pre-qualification uses soft credit pull via CreditXpert and preliminary
-  AUS findings via Desktop Underwriter (DU).
+AUTOMATED vs. MANUAL VERIFICATION:
+  The Work Number covers roughly 60% of employment verifications
+  automatically. The remaining 40% — especially gig workers, 1099
+  contractors, and small business employees — require manual VOE,
+  which adds 2-3 days to processing time.
 
-STEP 2 — APPLICATION & DISCLOSURE
-  Full 1003 application completed via LoanFlow borrower portal or in-person.
-  System auto-generates initial disclosures (LE, TILA, etc.) within
-  3 business days per TRID requirements.
+  TRIBAL KNOWLEDGE: Asset verification through Plaid sometimes fails
+  for credit unions and smaller banks. When this happens, experienced
+  processors know to request 60-day bank statements directly rather
+  than waiting for a Plaid retry, which rarely resolves the connection
+  issue and just delays the file.
 
-  TRIBAL KNOWLEDGE: Processor Maria Santos has discovered that if the LE is
-  regenerated after a program change within the first 3 days, it resets
-  the TRID clock. This is not documented anywhere but has been confirmed
-  by compliance. Multiple processors now rely on this workaround.
+  EXCEPTION: Self-employed borrowers with S-Corp structures where
+  officer compensation is below market rates trigger additional review.
+  Experienced underwriters apply an informal "reasonableness test"
+  comparing officer comp to Bureau of Labor Statistics data. This
+  is not in the official underwriting guidelines but catches income
+  misrepresentation early before the file goes to formal underwriting.
 
-STEP 3 — PROCESSING
-  Average processing time: 4.2 days (down from 6.8 days in Q3)
-  Processors order: appraisal, title, HOI, VOE, VOD, tax transcripts
+ROLES INVOLVED: Loan Processor, Processor Manager, Appraisal Desk
 
-  Automated verification via The Work Number (Equifax) covers 61% of
-  employment verifications. Remaining 39% require manual VOE, adding
-  2-3 days to processing time.
 
-  EXCEPTION: Self-employed borrowers with S-Corp structures and officer
-  compensation below market rates trigger additional review. Underwriter
-  Lisa Chang developed an informal "reasonableness test" comparing officer
-  comp to industry benchmarks via BLS data — this isn't in the official
-  guidelines but catches 80% of income misrepresentation cases.
+────────────────────────────────────────────────────────────────────────
+2B. PROPERTY VALUATION (APPRAISAL)
+────────────────────────────────────────────────────────────────────────
 
-STEP 4 — UNDERWRITING
-  Three-tier review system:
-    Tier 1 — AUS-approved, standard docs → Junior underwriter (auto-assign)
-    Tier 2 — AUS-approved with conditions → Senior underwriter
-    Tier 3 — Manual underwrite, non-QM, exceptions → VP review
+Property valuation is a critical step that runs in parallel with
+processing. The appraisal determines the property's market value, which
+directly affects the loan-to-value (LTV) ratio and loan eligibility.
 
-  Average underwriting decision time:
-    Tier 1: 1.2 days | Tier 2: 2.4 days | Tier 3: 4.7 days
+APPRAISAL ORDERING:
+  Appraisals must be ordered through an Appraisal Management Company
+  (AMC) to maintain independence per Dodd-Frank requirements. The lender
+  cannot directly select or influence the appraiser. Common AMCs include
+  CoreLogic, Clarocity, ServiceLink, and Solidifi.
+
+  Typical appraisal turnaround: 5-10 business days (varies by market)
+  Rural properties and unique homes can take 2-3 weeks due to limited
+  appraiser availability and difficulty finding comparable sales.
+
+APPRAISAL TYPES:
+  Full appraisal (1004/70): Interior and exterior inspection with
+    comparable sales analysis — required for most purchase transactions
+  Exterior-only (2055): Drive-by inspection — used for some refinances
+  Desktop appraisal: No physical inspection, uses MLS data and public
+    records — allowed by GSEs for certain low-risk refinances
+  Appraisal waiver: AUS issues a Property Inspection Waiver (PIW) —
+    no appraisal needed, based on data confidence in the AUS model
+
+APPRAISAL REVIEW:
+  The Appraisal Desk or a Staff Review Appraiser reviews every completed
+  appraisal for:
+    - Comparable sales selection (appropriate proximity, recency, similarity)
+    - Adjustments reasonableness (line adjustments under 10%, net under 15%)
+    - Subject property condition and marketability
+    - Compliance with USPAP (Uniform Standards of Professional Appraisal Practice)
+
+  EXCEPTION: When the appraised value comes in below the purchase price
+  ("short appraisal"), the loan team has limited options:
+    1. Request a Reconsideration of Value (ROV) with additional comps
+    2. Buyer renegotiates purchase price with seller
+    3. Buyer brings additional cash to cover the gap
+    4. Switch to a different loan product with higher LTV tolerance
+  The ROV process is delicate — the appraiser is not obligated to change
+  their opinion. Providing strong comparable sales that the appraiser
+  may have missed is the most effective approach.
+
+  TRIBAL KNOWLEDGE: When requesting a Reconsideration of Value, experienced
+  Loan Officers know to provide comps that closed AFTER the appraiser's
+  effective date, not before — appraisers are more receptive to new data
+  they couldn't have had at the time of the original report. Also, sending
+  the ROV through the AMC (not directly to the appraiser) is required by
+  regulation, but some AMCs have a 48-hour internal processing delay.
+  Teams that have identified which AMCs respond fastest route time-sensitive
+  ROVs to those AMCs when possible.
+
+  TRIBAL KNOWLEDGE: For FHA appraisals, any health and safety issues
+  flagged by the appraiser (peeling paint, broken handrails, exposed
+  wiring) must be repaired BEFORE closing — unlike conventional loans
+  where these can be addressed post-closing. Experienced processors
+  immediately flag FHA files with property condition issues to the
+  Loan Officer so repair negotiations start early, avoiding last-minute
+  closing delays.
+
+TECHNOLOGY:
+  Mercury Network / Reggora — AMC order management platforms
+  CoreLogic AVM (Automated Valuation Model) — used for desktop appraisals
+  MLS data feeds — comparable sales data
+
+ROLES INVOLVED: Appraiser (independent, via AMC), Staff Review Appraiser,
+  Appraisal Desk Coordinator, AMC Account Manager
+
+
+────────────────────────────────────────────────────────────────────────
+3. UNDERWRITING
+────────────────────────────────────────────────────────────────────────
+
+Underwriting is where credit risk is assessed and the loan is either
+approved, suspended, or denied.
+
+THREE-TIER REVIEW SYSTEM:
+  Tier 1 — AUS-approved, standard documentation, clean credit
+           Assigned to Junior Underwriter, expected turnaround: 1 day
+  Tier 2 — AUS-approved but with conditions (overlays, exceptions)
+           Assigned to Senior Underwriter, expected turnaround: 2-3 days
+  Tier 3 — Manual underwrite, non-QM products, complex scenarios
+           Requires VP of Underwriting review, turnaround: 4-5 days
+
+AUS ENGINES:
+  Desktop Underwriter (DU) by Fannie Mae — primary for conventional loans
+  Loan Product Advisor (LPA) by Freddie Mac — secondary, used for
+    comparison runs and Freddie-specific products
+  GUS (Government Underwriting System) — used for USDA loans
+  FHA TOTAL Scorecard — for FHA mortgage insurance approval
 
   TRIBAL KNOWLEDGE: For VA loans with multiple periods of service, the
-  underwriting team has learned that the VA Regional Loan Center in
-  Phoenix processes COE requests 2-3 days faster than other centers.
-  Thomas Rodriguez routes all complex VA eligibility cases through Phoenix
-  even when the borrower's state would normally route elsewhere.
+  VA Regional Loan Center in Phoenix processes Certificate of Eligibility
+  (COE) requests 2-3 days faster than other centers. Seasoned underwriters
+  route all complex VA eligibility cases through Phoenix regardless of
+  borrower's state, saving significant time on these files.
 
-STEP 5 — CONDITIONAL APPROVAL & CLEARING CONDITIONS
-  Average conditions per file: 6.3 (Tier 1), 12.8 (Tier 2), 22.1 (Tier 3)
-  Average days to clear conditions: 5.4 days
-  Most common conditions: Updated paystubs (78%), Explanation letters (65%),
-  Gift letter documentation (34%), Source & season large deposits (31%)
+CONDITIONAL APPROVAL:
+  Most loans receive a conditional approval with a list of "conditions"
+  (stipulations) that must be satisfied before final approval.
+  Average conditions per file:
+    Tier 1: 6 conditions | Tier 2: 13 conditions | Tier 3: 22 conditions
+  Common conditions: updated paystubs, explanation letters for credit
+  inquiries, gift letter documentation, large deposit sourcing.
 
-STEP 6 — CLEAR TO CLOSE & CLOSING
-  Closing department managed by Director Karen Wu. Team of 6 closers.
-  Average time from CTC to funding: 3.2 days
-  E-closing adoption rate: 42% (hybrid) and 8% (full RON)
+  EXCEPTION: When a borrower's debt-to-income ratio is borderline
+  (45-49.99% on conventional), some AUS systems approve with a finding
+  that is not a true DU Approve but rather an "Eligible" with risk
+  factors. Many investors will not purchase these files. Underwriters
+  maintain an informal "investor tolerance matrix" that maps which
+  investors accept which edge-case AUS findings — this is not published
+  anywhere and is maintained through experience and relationship knowledge.
 
-  EXCEPTION: California-specific notary requirements for deed of trust
-  with power of sale clause require wet signatures for the deed even in
-  hybrid e-closing states. Karen Wu's team has a workaround: they schedule
-  a mobile notary for just the deed while everything else is e-signed.
-  This saves 1-2 days vs. full wet closing.
+ROLES INVOLVED: Junior Underwriter, Senior Underwriter, VP of Underwriting
 
-STEP 7 — POST-CLOSING & SECONDARY MARKETING
-  Loans packaged for sale within 15 days of funding. James Park's team
-  manages a $280M pipeline hedge using TBA forward sales and options.
-
-  Investor suspense rate: 4.2% (industry avg: 8.1%)
-  Top suspense reasons: Missing HMDA data (28%), Title policy delays (24%),
-  Trailing documents (19%), Appraisal reconsideration of value (14%)
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 3: TECHNOLOGY ECOSYSTEM
+4. CLEAR TO CLOSE & CLOSING
 ────────────────────────────────────────────────────────────────────────
 
-PRIMARY SYSTEMS:
-  ┌─────────────────────────────────────────────────────┐
-  │ Encompass LOS (ICE Mortgage Technology)             │
-  │   → Core loan origination, fee management, docs     │
-  │   → 3,800 active users                              │
-  │   → Version 24.3 (upgraded Q3 2025)                 │
-  ├─────────────────────────────────────────────────────┤
-  │ LoanFlow (Proprietary)                              │
-  │   → CRM, borrower portal, LO dashboard             │
-  │   → Built on: React, Node.js, PostgreSQL, AWS      │
-  │   → Integrates with Encompass via SDK               │
-  ├─────────────────────────────────────────────────────┤
-  │ Desktop Underwriter (Fannie Mae)                    │
-  │   → Primary AUS for conventional loans              │
-  │   → 89% of conv. loans get DU Approve/Eligible     │
-  ├─────────────────────────────────────────────────────┤
-  │ Loan Product Advisor (Freddie Mac)                  │
-  │   → Secondary AUS, used for comparison runs         │
-  │   → Also used for Freddie-specific products (HFA)   │
-  ├─────────────────────────────────────────────────────┤
-  │ Optimal Blue (pricing engine)                       │
-  │   → Real-time pricing across 18 investors           │
-  │   → Lock management and hedge integration           │
-  ├─────────────────────────────────────────────────────┤
-  │ Compliance Sentinel (Proprietary)                   │
-  │   → TRID timer tracking                             │
-  │   → Reg B adverse action monitoring                 │
-  │   → Fair lending analysis (HMDA + proprietary)      │
-  │   → Developed by David Kim's team with Raj Mehta    │
-  ├─────────────────────────────────────────────────────┤
-  │ DocuSign / Notarize                                 │
-  │   → E-signing for disclosures and closing           │
-  │   → RON (Remote Online Notarization) for 12 states  │
-  └─────────────────────────────────────────────────────┘
+Once all conditions are cleared, the underwriter issues a "Clear to Close"
+(CTC). The file moves to the Closing Department.
 
-INTEGRATION CHALLENGES:
-  - Encompass API rate limits cause batch processing failures during
-    peak hours (10am-2pm PT). Raj's team implemented a queue system
-    but it adds 15-30 minute delays.
-  - The Work Number (Equifax) frequently has stale employment data
-    for gig economy / 1099 workers, leading to manual fallback.
-  - Optimal Blue pricing discrepancies with investor rate sheets
-    occur ~3% of the time, requiring manual lock desk intervention.
-    James Park's team has built a reconciliation script that catches
-    most of these before loan lock.
+CLOSING PROCESS:
+  - Final Closing Disclosure (CD) prepared and sent to borrower
+  - 3-day waiting period per TRID before closing can occur
+  - Title company or settlement agent coordinates the closing
+  - Closing can be wet-sign (in person), hybrid e-close, or full RON
+    (Remote Online Notarization)
+
+E-CLOSING ADOPTION:
+  Hybrid e-closing (most docs e-signed, deed/note wet-signed): ~42%
+  Full RON (fully remote): ~8% — limited to states that allow it
+  Traditional wet-sign: ~50%
+
+  EXCEPTION: In California, deed of trust documents with power of sale
+  clause require wet notarized signatures even in hybrid e-closing
+  scenarios. Closing teams work around this by scheduling a mobile
+  notary specifically for the deed while everything else is e-signed.
+  This saves 1-2 days vs. requiring a full wet closing.
+
+FUNDING:
+  Wire instructions sent to title company on closing day. Lender funds
+  the loan after receiving the signed closing package and confirming
+  all conditions are met. Average time from CTC to funding: 3 days.
+
+  TRIBAL KNOWLEDGE: Some title companies in Oregon have a 24-hour
+  recording delay that other states don't have. If the closer doesn't
+  account for this, the funding date shifts, which can violate lock
+  expiration deadlines. Experienced closers always add 1 buffer day
+  for Oregon closings in their scheduling.
+
+TECHNOLOGY:
+  DocuSign — used for e-signing disclosures and non-notarized docs
+  Notarize — RON platform for fully remote closings
+  Encompass — generates closing docs, CD, and final compliance check
+
+ROLES INVOLVED: Closer, Closing Manager, Title Company, Settlement Agent
+
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 4: KEY PERFORMANCE INDICATORS — Q4 2025
+5. POST-CLOSING
 ────────────────────────────────────────────────────────────────────────
 
-┌──────────────────────────────────────────┬───────────┬──────────┬────────┐
-│ Metric                                   │ Q4 2025   │ Q3 2025  │ Trend  │
-├──────────────────────────────────────────┼───────────┼──────────┼────────┤
-│ Total Applications                       │ 4,287     │ 3,940    │ ↑ 8.8% │
-│ Total Funded Loans                       │ 3,614     │ 3,198    │ ↑ 13%  │
-│ Total Funded Volume                      │ $1.18B    │ $1.02B   │ ↑ 15.7%│
-│ Average Loan Size                        │ $326,500  │ $319,000 │ ↑ 2.3% │
-│ Pull-Through Rate                        │ 84.3%     │ 72.0%    │ ↑ 12.3 │
-│ Average Days to Close (Purchase)         │ 28.4      │ 34.2     │ ↓ 17%  │
-│ Average Days to Close (Refinance)        │ 22.1      │ 26.8     │ ↓ 17.5%│
-│ First Payment Default Rate               │ 0.12%     │ 0.18%   │ ↓ 33%  │
-│ Investor Suspense Rate                   │ 4.2%      │ 5.8%    │ ↓ 27.6%│
-│ Customer Satisfaction (NPS)              │ 72        │ 68      │ ↑ 5.9% │
-│ Loan Officer Productivity (units/mo)     │ 4.8       │ 4.1     │ ↑ 17%  │
-│ Cost per Loan (fully loaded)             │ $8,240    │ $9,180  │ ↓ 10.2%│
-│ Gross Revenue per Loan                   │ $14,820   │ $13,950 │ ↑ 6.2% │
-│ Margin per Loan                          │ $6,580    │ $4,770  │ ↑ 37.9%│
-│ Compliance Exceptions                    │ 14        │ 23      │ ↓ 39.1%│
-│ Appraisal Waiver Rate                    │ 28%       │ 22%     │ ↑ 27.3%│
-│ E-Closing Adoption Rate                  │ 50%       │ 38%     │ ↑ 31.6%│
-│ Wholesale Channel Contribution           │ 38%       │ 35%     │ ↑ 8.6% │
-│ Average Conditions per File              │ 9.4       │ 11.2    │ ↓ 16.1%│
-│ Underwriter Capacity Utilization         │ 87%       │ 94%     │ ↓ 7.4% │
-└──────────────────────────────────────────┴───────────┴──────────┴────────┘
+After funding, the loan enters post-closing operations.
 
-CHANNEL BREAKDOWN:
-  Retail:        2,661 loans | $872M funded | 62% of volume
-  Wholesale:     911 loans  | $276M funded | 38% of volume
-  Correspondent: 42 loans   | $32M funded  | (pilot phase)
+DOCUMENT RECORDING:
+  The closing package (deed of trust, mortgage note) is sent to the
+  county recorder's office. Recording timelines vary by county — some
+  are fully electronic (same day), others are paper-based (2-6 weeks).
 
-PRODUCT MIX:
-  Conventional (Conf):  58% | Avg FICO: 742 | Avg LTV: 74%
-  FHA:                  18% | Avg FICO: 668 | Avg LTV: 93%
-  VA:                   14% | Avg FICO: 712 | Avg LTV: 97%
-  Jumbo:                 7% | Avg FICO: 778 | Avg LTV: 62%
-  Non-QM:                3% | Avg FICO: 694 | Avg LTV: 71%
+TRAILING DOCUMENTS:
+  Any documents not received at closing (final title policy, recorded
+  deed, HOA certifications) must be collected within 60-90 days.
+  Post-closing teams track outstanding trailing docs and follow up
+  with title companies and borrowers.
+
+INVESTOR DELIVERY & LOAN SALE:
+  Loans are packaged and delivered to investors (Fannie Mae, Freddie Mac,
+  Ginnie Mae, or private investors) typically within 15 days of funding.
+
+  SUSPENSE: Investors may "suspend" a delivered loan if documentation
+  is missing or data doesn't match. Common suspense reasons:
+    - Missing or incorrect HMDA data (28%)
+    - Title policy delays (24%)
+    - Trailing documents not yet received (19%)
+    - Appraisal reconsideration of value pending (14%)
+    - Data discrepancies between LOS and delivery file (15%)
+
+  TRIBAL KNOWLEDGE: When delivering to Fannie Mae via their portal,
+  the HMDA data fields must match exactly between Encompass and the
+  delivery file. A common mismatch occurs on the "rate spread" field
+  when the loan was repriced after lock. Experienced secondary marketing
+  analysts always manually verify rate spread on repriced loans before
+  delivery — the LOS doesn't auto-update this field reliably.
+
+ROLES INVOLVED: Post-Closer, Shipping Clerk, Secondary Marketing Analyst
+
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 5: COMPLIANCE & REGULATORY LANDSCAPE
+6. LOAN SERVICING
 ────────────────────────────────────────────────────────────────────────
 
-CURRENT REGULATORY FOCUS AREAS:
+Some lenders retain servicing rights, others sell them. For retained
+servicing:
 
-1. TRID (TILA-RESPA Integrated Disclosure)
-   David Kim's team audits 15% of all files for TRID compliance.
-   Q4 violation rate: 1.8% (down from 3.2% in Q3)
-   Most common violations: Changed circumstance documentation (44%),
-   Fee tolerance cures (31%), Timing of revised LE (25%)
+SERVICING ACTIVITIES:
+  - Payment collection and processing
+  - Escrow management (property taxes, insurance)
+  - Investor remittance (monthly principal & interest pass-through)
+  - Borrower communications (statements, tax forms 1098)
+  - Loss mitigation if borrower becomes delinquent
 
-   TRIBAL KNOWLEDGE: Compliance analyst Rachel Torres discovered that
-   Encompass auto-calculates tolerance cures incorrectly when there are
-   multiple changed circumstances on the same fee line item. She created
-   a manual spreadsheet tracker that the compliance team uses to verify
-   all tolerance cure calculations. This has prevented 12 potential
-   regulatory violations in Q4.
+ESCROW MANAGEMENT:
+  Annual escrow analysis required to ensure borrower's monthly escrow
+  payment covers projected tax and insurance disbursements. If there's
+  a shortage, the servicer must notify the borrower and offer a payment
+  adjustment or lump-sum option.
 
-2. ECOA / Fair Lending
-   HMDA data analyzed quarterly for potential disparities.
-   AI-assisted fair lending analysis implemented via Compliance Sentinel.
-   No material findings in Q4. However, denial rate disparity between
-   Hispanic and non-Hispanic white applicants in the Sacramento MSA
-   requires monitoring (8.2 percentage point gap, partially explained
-   by credit score distribution but 2.1 points remain unexplained).
+  EXCEPTION: In some counties, property tax reassessments happen mid-year
+  (supplemental tax bills). The escrow analysis system doesn't always
+  pick these up automatically. Servicing teams in California have learned
+  to manually check for supplemental tax bills within 6 months of any
+  purchase transaction — if missed, the escrow account can go into
+  significant shortage, causing borrower complaints and potential
+  regulatory issues.
 
-3. State-Specific Licensing
-   Operating in 4 states with varying requirements:
-   - California (DRE & DFPI dual licensing)
-   - Oregon (DCBS licensing, unique fee disclosure rules)
-   - Washington (DFI licensing, cooling-off period requirements)
-   - Arizona (DIFI licensing, standard requirements)
+SERVICING TRANSFER:
+  When servicing rights are sold, a "goodbye/hello" letter process is
+  triggered. The outgoing servicer sends a goodbye letter 15 days before
+  transfer; the incoming servicer sends a hello letter. Payment processing
+  must continue without interruption during the 60-day transfer window.
 
-   EXCEPTION: Oregon's unique "Total Loan Cost" disclosure must be
-   provided in addition to the federal LE. The LoanFlow system generates
-   this automatically, but when loans transfer between branches across
-   state lines, the Oregon disclosure sometimes doesn't generate.
-   Patricia Huang implemented a manual checklist for inter-branch
-   transfers but it's still missed about 5% of the time.
+  TRIBAL KNOWLEDGE: During servicing transfers, autopay enrollments
+  do NOT automatically transfer. Borrowers who had autopay set up with
+  the old servicer often miss their first payment with the new servicer
+  because they assume it carries over. Experienced servicing teams
+  proactively call autopay borrowers during the transfer window to
+  prevent delinquency.
 
-4. Flood Insurance Compliance
-   FEMA map changes in Q4 affected 127 properties in our pipeline.
-   23 loans required flood insurance that wasn't initially anticipated.
-   The appraisal team now checks FEMA flood zone status at ordering
-   (not just at closing) — a process change implemented after two loans
-   had to be delayed 2 weeks for emergency flood insurance procurement.
+TECHNOLOGY:
+  Black Knight MSP or Sagent LoanServ — primary servicing platforms
+  CoreLogic Tax Services — property tax monitoring
+  Escrow analysis engines built into servicing platform
+
+ROLES INVOLVED: Servicing Specialist, Escrow Analyst, Loss Mitigation
+  Specialist, Servicing Manager
+
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 6: RISK MANAGEMENT & QUALITY CONTROL
+7. COMPLIANCE & REGULATORY FRAMEWORK
+────────────────────────────────────────────────────────────────────────
+
+Mortgage lending is one of the most heavily regulated industries. Key
+regulations that affect every stage of the value chain:
+
+TRID (TILA-RESPA Integrated Disclosure):
+  Governs timing and accuracy of Loan Estimate and Closing Disclosure.
+  Common violations: changed circumstance documentation gaps, fee
+  tolerance cure miscalculations, timing of revised Loan Estimates.
+
+  TRIBAL KNOWLEDGE: Encompass auto-calculates tolerance cures incorrectly
+  when there are multiple changed circumstances on the same fee line item.
+  Compliance teams who have discovered this use a manual spreadsheet
+  tracker to verify all tolerance cure calculations before closing.
+  This workaround has prevented numerous potential regulatory violations.
+
+ECOA (Equal Credit Opportunity Act) / FAIR LENDING:
+  HMDA data must be collected and reported annually. Lenders analyze
+  denial rates across protected classes (race, ethnicity, gender, age)
+  to identify potential disparate impact. AI-assisted fair lending
+  analysis tools are increasingly used to detect subtle patterns.
+
+RESPA (Real Estate Settlement Procedures Act):
+  Governs fee disclosures, prohibits kickbacks and referral fees.
+  Affiliated business arrangements must be disclosed.
+
+STATE-SPECIFIC REQUIREMENTS:
+  Each state has unique licensing and disclosure requirements.
+  Example: Oregon requires a "Total Loan Cost" disclosure in addition
+  to the federal Loan Estimate. When loans transfer between branches
+  across state lines, state-specific disclosures sometimes don't
+  auto-generate in the LOS — requiring manual intervention.
+
+  EXCEPTION: When a loan closes in one state but the property is in
+  another (common in border areas like Portland/Vancouver), both states'
+  disclosure requirements must be met. This dual-state scenario is not
+  well-handled by most LOS systems and requires manual compliance review.
+
+ROLES INVOLVED: Compliance Officer, Compliance Analyst, HMDA Reporting
+  Specialist, Quality Control Reviewer
+
+
+────────────────────────────────────────────────────────────────────────
+8. QUALITY CONTROL & RISK MANAGEMENT
 ────────────────────────────────────────────────────────────────────────
 
 PRE-FUNDING QC:
-  - 100% of government loans reviewed pre-funding
-  - 20% random sample of conventional loans
-  - All non-QM and jumbo loans reviewed by senior underwriter
-  - Defect rate: 2.8% (industry benchmark: 3.5-5%)
+  - 100% of government loans (FHA, VA, USDA) reviewed before funding
+  - Random sample (15-20%) of conventional loans
+  - All non-QM and jumbo loans reviewed by a senior underwriter
+  Typical pre-funding defect rate: 2-3%
 
 POST-CLOSING QC:
-  - 10% random sample across all channels
-  - Performed by third-party QC firm (Aces Quality Management)
-  - Critical defect rate: 0.4% (industry benchmark: 1.2%)
-  - Most common findings: Missing signatures on non-critical docs (38%),
-    Income calculation rounding differences (22%), Missing HOA cert (18%)
+  - 10% random sample across all channels and products
+  - Often performed by a third-party QC firm (e.g., Aces Quality
+    Management, JMAC, or Digital Risk)
+  - Common findings: missing signatures on non-critical docs, income
+    calculation rounding differences, missing HOA certifications
 
 FRAUD DETECTION:
-  - LoanGuard AI fraud detection integrated with Encompass
-  - Flagged 89 files in Q4 for potential issues
-  - 12 confirmed fraud attempts intercepted (occupancy fraud: 7,
-    income fraud: 3, identity fraud: 2)
-  - Estimated loss prevention: $3.2M
+  AI-powered fraud detection tools (e.g., LoanGuard, PointPredictive)
+  are integrated with the LOS to flag suspicious patterns:
+    - Occupancy fraud (borrower claims primary residence but isn't)
+    - Income fraud (inflated income or fabricated employment)
+    - Identity fraud (synthetic identity or stolen identity)
+    - Property flipping schemes
 
 REPURCHASE RISK:
-  - Total outstanding repurchase requests: 8 loans ($2.8M UPB)
-  - Successfully defended 5 requests via Aces audit trails
-  - Settled 2 requests at 40% of original loss claim
-  - 1 pending review
+  If an investor discovers a defect after purchasing the loan, they
+  can demand the lender repurchase it. Maintaining clean audit trails
+  and thorough QC reduces repurchase exposure significantly.
+
+  TRIBAL KNOWLEDGE: When responding to investor repurchase demands,
+  experienced secondary marketing teams know that providing a detailed
+  remediation plan (instead of just disputing the finding) leads to
+  a settlement at 30-50% of the original loss claim in most cases.
+  Flat denials almost always escalate to full repurchase demands.
+
+ROLES INVOLVED: QC Reviewer, QC Manager, Fraud Analyst, Risk Manager
+
 
 ────────────────────────────────────────────────────────────────────────
-SECTION 7: MARKET OUTLOOK & STRATEGIC INITIATIVES
+9. TECHNOLOGY ECOSYSTEM
 ────────────────────────────────────────────────────────────────────────
 
-MARKET CONDITIONS:
-  30-year fixed rate: 6.78% (Q4 avg) — up from 6.45% in Q3
-  Purchase market: Strong, driven by inventory normalization in West Coast
-  Refinance market: Limited (est. 12% of total volume)
-  Housing inventory: 3.2 months supply (up from 2.4 months in Q3)
+The mortgage technology stack typically includes:
 
-  Key competitors: loanDepot, Guaranteed Rate, United Wholesale Mortgage
-  Competitive advantage: Speed (28-day close avg vs. industry 42 days),
-  technology, and local market expertise.
+LOAN ORIGINATION SYSTEM (LOS):
+  Encompass (ICE Mortgage Technology) — market leader
+  Handles: loan application, fee management, disclosure generation,
+  document management, workflow automation, compliance checks
 
-STRATEGIC INITIATIVES FOR 2026:
+PRICING ENGINE:
+  Optimal Blue — real-time pricing across multiple investors
+  Handles: rate locks, lock extensions, renegotiations, best-execution
+  analysis across investor/product combinations
 
-1. AI-Powered Underwriting Assistant ("UW Copilot")
-   Budget: $1.2M | Owner: Raj Mehta + Thomas Rodriguez
-   Goal: Reduce underwriting decision time by 50% using AI to
-   pre-review conditions and suggest stipulations.
-   Status: POC phase, testing on Tier 1 files
-   Risk: Regulatory uncertainty around AI in credit decisions
+CRM & LEAD MANAGEMENT:
+  Velocify, Salesforce, or proprietary systems
+  Handles: lead routing, follow-up automation, pipeline management
 
-2. Correspondent Channel Scale-Up
-   Budget: $2.5M | Owner: Sarah Chen
-   Goal: $500M annual volume by 2027
-   Hiring: 8 additional operations staff, 2 account executives
-   Key partnerships being negotiated: 3 community banks, 2 credit unions
+AUTOMATED UNDERWRITING:
+  Desktop Underwriter (DU) — Fannie Mae
+  Loan Product Advisor (LPA) — Freddie Mac
+  FHA TOTAL Scorecard — HUD/FHA
+  GUS — USDA
 
-3. Hispanic Homeownership Initiative
-   Budget: $800K | Owner: Jennifer Walsh + David Kim
-   Goal: Address the denial rate gap in Sacramento MSA
-   Programs: Spanish-language pre-purchase counseling, alternative
-   credit documentation, community lending partnerships
-   Partnership: Local HUD-approved counseling agencies
+VERIFICATION SERVICES:
+  The Work Number (Equifax) — employment verification
+  Plaid / Finicity — asset verification
+  CreditXpert — credit scoring and simulation
 
-4. Post-Closing Automation ("Lights Out Post-Close")
-   Budget: $600K | Owner: Patricia Huang + Karen Wu
-   Goal: Automate 90% of post-closing activities including investor
-   delivery, document recording, and servicing boarding
-   Expected savings: $1,800 per loan in post-close costs
+E-CLOSING:
+  DocuSign — electronic signatures
+  Notarize / Snapdocs — remote online notarization (RON)
 
-5. Non-QM Product Expansion
-   Budget: $400K | Owner: Amanda Foster + James Park
-   Goal: Expand non-QM offerings (bank statement, DSCR, asset depletion)
-   Target: 8% of total volume by Q4 2026
-   Key investor partners: Angel Oak, Deephaven, A&D Mortgage
+COMPLIANCE:
+  ComplianceEase / Compliance Sentinel — regulatory monitoring
+  HMDA reporting tools integrated with LOS
+
+SERVICING PLATFORMS:
+  Black Knight MSP — dominant servicing platform
+  Sagent LoanServ — alternative servicing system
+  CoreLogic — property tax monitoring and flood zone verification
+
+INTEGRATION CHALLENGES:
+  - LOS API rate limits during peak hours cause batch processing delays
+  - Employment verification data is stale for gig economy workers
+  - Pricing engine discrepancies with investor rate sheets occur ~3%
+    of the time, requiring manual lock desk intervention
+  - Different investor delivery portals have different data format
+    requirements, making multi-investor delivery error-prone
+
+
+────────────────────────────────────────────────────────────────────────
+10. NOTICE OF COMPLETION (NOC) & DOCUMENT RETENTION
+────────────────────────────────────────────────────────────────────────
+
+After all post-closing activities are complete — loan is delivered to
+the investor, all trailing docs received, recording confirmed — the
+file receives a Notice of Completion status.
+
+DOCUMENT RETENTION:
+  Federal and state regulations require mortgage documents to be retained
+  for specific periods:
+    - 3 years for TRID-related disclosures
+    - 5 years for HMDA data
+    - 7 years for general loan documents
+    - Permanent retention for recorded instruments
+
+  Most lenders use document management systems (e.g., FileNet, Docutech)
+  integrated with their LOS for long-term document storage.
+
+  TRIBAL KNOWLEDGE: During regulatory examinations, examiners often
+  request documents organized in a specific order that doesn't match how
+  the LOS stores them. Compliance teams who have been through multiple
+  exams maintain a "regulatory exam prep template" that reorganizes the
+  loan file into the examiner's expected format. This undocumented
+  template saves days of preparation time during audits.
+
+ROLES INVOLVED: Post-Closing Manager, Document Custodian, Compliance
+  Officer, Records Management

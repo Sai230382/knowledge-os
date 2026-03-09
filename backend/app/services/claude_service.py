@@ -16,21 +16,23 @@ CHUNK_SIZE = 120000
 # Max tables per chunk
 TABLES_PER_CHUNK = 20
 
-SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. Analyze documents and extract the most important knowledge.
+SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. Analyze documents and extract knowledge across 8 dimensions.
 
 APPROACH:
 - Be DESCRIPTIVE: only report what you can directly support with evidence from the text.
 - Surface hidden connections that people working in silos would miss.
 - If a category has nothing genuine, return an empty list. Never fabricate.
 
-Extract into these 6 sections:
+Extract into these 8 sections:
 
-1. INDUSTRY PATTERNS: Key trends or themes in the data. Max 5. Empty if none.
-2. CLIENT PATTERNS: Behaviors or decision patterns. Max 5. Empty if none.
-3. TRIBAL KNOWLEDGE: Undocumented know-how or workarounds. Max 5. Empty if none.
-4. EXCEPTIONS: Anomalies or special handling. Max 5. Empty if none.
-5. KNOWLEDGE GRAPH: The most important entities and relationships. Max 20 nodes, 30 edges.
-6. CONTEXT GRAPH: High-level view of how key entities interconnect across silos. Max 12 nodes, 18 edges.
+1. INDUSTRY PATTERNS: Market trends, industry dynamics, competitive forces. Max 5. Empty if none.
+2. PROCESS VARIATIONS: How different inputs/scenarios trigger different process paths (e.g., FHA vs conventional, self-employed vs W-2). Max 5. Empty if none.
+3. TRIBAL KNOWLEDGE: Undocumented know-how, informal rules, workarounds that only experienced people know. Max 5. Empty if none.
+4. EXCEPTIONS: Edge cases, anomalies, special handling that deviates from standard process. Max 5. Empty if none.
+5. GAP ANALYSIS: Missing documentation, ownership gaps, process gaps, technology gaps, single points of failure. Max 5. Empty if none.
+6. RECOMMENDATIONS: Actionable improvements — formalize tribal knowledge, automate exceptions, fix gaps. Max 5. Empty if none.
+7. KNOWLEDGE GRAPH: The FORMAL map — entities and their official, documented relationships. Max 20 nodes, 30 edges.
+8. CONTEXT GRAPH: The HIDDEN intelligence layer — how tribal knowledge, exceptions, and unseen patterns create informal dependencies between entities. Every edge should represent knowledge NOT in any manual. Max 15 nodes, 25 edges.
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 - person: People, roles, teams, departments, organizations
@@ -39,7 +41,12 @@ ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 - concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 JSON Schema:
-{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"client_patterns":[{"title":"str","description":"str","frequency":"str","business_impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.7}]},"kpis":null}
+{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"process_variations":[{"title":"str","description":"str","trigger":"str","impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"gap_analysis":[{"title":"str","description":"str","gap_type":"process_gap|knowledge_gap|technology_gap|ownership_gap","risk_level":"high|medium|low","recommendation":"str"}],"recommendations":[{"title":"str","description":"str","priority":"high|medium|low","effort":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","context_type":"tribal_knowledge|exception|hidden_pattern|workaround","strength":0.7}]}}
+
+KNOWLEDGE GRAPH vs CONTEXT GRAPH — key distinction:
+- Knowledge Graph edges = FORMAL relationships ("uses", "manages", "requires", "feeds_into")
+- Context Graph edges = HIDDEN intelligence ("workaround: ...", "tribal: ...", "exception: ..."). Each edge must have a context_type.
+- Context Graph nodes should reference the SAME entity IDs as Knowledge Graph where applicable.
 
 RULES:
 - Keep it focused: only the MOST important entities, not everything
@@ -48,30 +55,29 @@ RULES:
 - All edges must reference valid node IDs
 - related_entities must reference knowledge_graph node IDs
 - Every node needs a description
-- Set kpis to null (not used)
 - Respond ONLY with valid JSON, no markdown, no code blocks"""
 
 
-MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. You receive multiple partial analyses of a large document (each from a different section/chunk) and merge them into one unified, comprehensive analysis.
+MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. Merge multiple partial analyses into one unified result.
 
 Your job:
-1. MERGE all industry patterns, client patterns, tribal knowledge, and exceptions — deduplicate similar items, combine evidence, and keep the best version of each.
-2. MERGE knowledge graphs — deduplicate nodes by their ID or similar names, merge edges, and ensure all edges reference valid node IDs.
-3. MERGE context graphs — same deduplication and merging rules.
-4. Where multiple chunks found the same pattern/entity, INCREASE the confidence level and merge the evidence lists.
-5. Create cross-chunk connections — if an entity in chunk 1 relates to an entity in chunk 3, add that edge.
+1. MERGE all sections — deduplicate similar items, combine evidence, keep the best version.
+2. MERGE knowledge graphs — deduplicate nodes by ID or similar names, merge edges.
+3. MERGE context graphs — same rules, preserve context_type on edges.
+4. Where multiple chunks found the same pattern/entity, INCREASE confidence and merge evidence.
+5. Create cross-chunk connections in both graphs.
+6. MERGE gap_analysis and recommendations — deduplicate, keep highest priority.
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 
-Respond with the SAME JSON schema as the individual analyses. Respond ONLY with valid JSON, no markdown formatting or code blocks.
+Respond with the SAME JSON schema as the individual analyses. Respond ONLY with valid JSON.
 
 IMPORTANT:
-- All entity IDs in graphs must be unique lowercase slugs
-- Every edge must reference valid node IDs that exist in the nodes array
-- Deduplicate aggressively — the final result should be clean and non-repetitive
-- related_entities in tribal_knowledge and exceptions MUST reference valid node IDs from the merged knowledge_graph
-- Every node MUST have a description field
-- Set kpis to null (not used)"""
+- All entity IDs: unique lowercase slugs
+- Every edge must reference valid node IDs
+- Context graph edges must have context_type (tribal_knowledge|exception|hidden_pattern|workaround)
+- Deduplicate aggressively
+- Every node MUST have a description field"""
 
 
 def _repair_json(text: str) -> str:
@@ -314,12 +320,13 @@ def _local_merge(chunk_results: list[dict]) -> dict:
     """
     merged = {
         "industry_patterns": [],
-        "client_patterns": [],
+        "process_variations": [],
         "tribal_knowledge": [],
         "exceptions": [],
+        "gap_analysis": [],
+        "recommendations": [],
         "knowledge_graph": {"nodes": [], "edges": []},
         "context_graph": {"nodes": [], "edges": []},
-        "kpis": None,
     }
 
     seen_pattern_titles = set()
@@ -327,8 +334,9 @@ def _local_merge(chunk_results: list[dict]) -> dict:
     seen_edge_keys = {"knowledge_graph": set(), "context_graph": set()}
 
     for result in chunk_results:
-        # Merge pattern lists (dedupe by title)
-        for key in ["industry_patterns", "client_patterns", "tribal_knowledge", "exceptions"]:
+        # Merge all list sections (dedupe by title)
+        for key in ["industry_patterns", "process_variations", "tribal_knowledge",
+                     "exceptions", "gap_analysis", "recommendations"]:
             for item in result.get(key, []):
                 title = item.get("title", "")
                 dedup_key = f"{key}:{title.lower().strip()}"
@@ -352,13 +360,6 @@ def _local_merge(chunk_results: list[dict]) -> dict:
                         and tgt in seen_node_ids[graph_key]):
                     seen_edge_keys[graph_key].add(edge_key)
                     merged[graph_key]["edges"].append(edge)
-
-        # Merge KPIs
-        kpis = result.get("kpis")
-        if kpis and isinstance(kpis, list):
-            if merged["kpis"] is None:
-                merged["kpis"] = []
-            merged["kpis"].extend(kpis)
 
     return merged
 
@@ -473,15 +474,14 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     return AnalysisOutput(**data), num_chunks
 
 
-REFINE_SYSTEM_PROMPT = """You are a Knowledge Analysis Assistant. You have a current analysis of a document and the user wants to refine, query, or expand it.
+REFINE_SYSTEM_PROMPT = """You are a Knowledge Analysis Assistant. You have a current analysis and the user wants to refine, query, or expand it.
 
 Based on the user's request, produce an UPDATED version of the analysis JSON. You may:
-- Add new patterns or entities the user asks about
-- Remove items the user says are irrelevant
+- Add/remove patterns, entities, gaps, or recommendations
 - Expand details on specific areas
-- Add new graph connections the user identifies
-- Adjust confidence levels based on user feedback
-- Answer the user's question by incorporating the answer INTO the analysis
+- Add new graph connections
+- Adjust confidence/priority levels
+- Answer questions by incorporating answers INTO the analysis
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 - person: People, roles, teams, departments, organizations
@@ -490,17 +490,16 @@ ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 - concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 IMPORTANT RULES:
-- Always return the COMPLETE updated analysis JSON (not just the changes)
-- Keep all existing items unless the user explicitly asks to remove them
-- All entity IDs must be unique lowercase slugs
+- Return the COMPLETE updated analysis JSON (not just changes)
+- Keep existing items unless user explicitly asks to remove them
+- All entity IDs: unique lowercase slugs
 - Every edge must reference valid node IDs
-- related_entities must reference valid knowledge_graph node IDs
+- Context graph edges must have context_type (tribal_knowledge|exception|hidden_pattern|workaround)
 - Every node MUST have a description field
-- Set kpis to null (not used)
-- Respond ONLY with valid JSON matching the original schema, no markdown or extra text
+- Respond ONLY with valid JSON, no markdown
 
 JSON Schema:
-{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"client_patterns":[{"title":"str","description":"str","frequency":"str","business_impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.7}]},"kpis":null}"""
+{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"process_variations":[{"title":"str","description":"str","trigger":"str","impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"gap_analysis":[{"title":"str","description":"str","gap_type":"process_gap|knowledge_gap|technology_gap|ownership_gap","risk_level":"high|medium|low","recommendation":"str"}],"recommendations":[{"title":"str","description":"str","priority":"high|medium|low","effort":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","context_type":"tribal_knowledge|exception|hidden_pattern|workaround","strength":0.7}]}}"""
 
 
 async def refine_analysis(
@@ -529,29 +528,23 @@ async def refine_analysis(
     return AnalysisOutput(**data)
 
 
-ACCUMULATE_SYSTEM_PROMPT = """You are a Knowledge Accumulation Specialist. You have an EXISTING analysis from previous documents and a NEW analysis from newly uploaded documents. Merge them into one comprehensive, unified analysis.
+ACCUMULATE_SYSTEM_PROMPT = """You are a Knowledge Accumulation Specialist. Merge an EXISTING analysis with a NEW analysis into one unified result.
 
 Rules:
 - Keep ALL existing knowledge — never drop previous findings
-- Add all NEW patterns and entities from the new analysis
-- Deduplicate — if the same entity/pattern appears in both, merge them (combine evidence, take higher confidence)
-- Create CROSS-DOCUMENT connections — if an entity from the old analysis relates to one from the new analysis, add that edge
-- Expand the knowledge and context graphs with new nodes and edges
-- The result should represent the ACCUMULATED knowledge across all documents
+- Add all NEW patterns, entities, gaps, and recommendations
+- Deduplicate — merge matching items, combine evidence, take higher confidence
+- Create CROSS-DOCUMENT connections in both knowledge and context graphs
+- The result should represent ACCUMULATED knowledge across all documents
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
-- person: People, roles, teams, departments, organizations
-- process: Workflows, procedures, operations, business rules, pipelines
-- technology: Software, systems, tools, platforms, data sources, integrations
-- concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 IMPORTANT:
-- All entity IDs must be unique lowercase slugs
+- All entity IDs: unique lowercase slugs
 - Every edge must reference valid node IDs
-- related_entities must reference valid knowledge_graph node IDs
+- Context graph edges must have context_type (tribal_knowledge|exception|hidden_pattern|workaround)
 - Every node MUST have a description field
-- Set kpis to null (not used)
-- Respond ONLY with valid JSON, no markdown or extra text"""
+- Respond ONLY with valid JSON, no markdown"""
 
 
 async def accumulate_analysis(

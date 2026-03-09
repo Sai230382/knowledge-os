@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { AnalysisOutput } from "@/lib/types";
 import PatternCards from "./PatternCards";
-import KPITable from "./KPITable";
 import KnowledgeGraph from "../graphs/KnowledgeGraph";
 import ContextGraph from "../graphs/ContextGraph";
 
@@ -10,24 +9,24 @@ interface ResultsTabsProps {
   analysis: AnalysisOutput;
 }
 
-type Tab = "patterns" | "kpis" | "knowledge" | "context";
+type Tab = "patterns" | "insights" | "knowledge" | "context";
 
 const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
   patterns: {
     icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
-    description: "Industry trends, client behaviors, undocumented tribal knowledge, and edge-case exceptions — extracted and categorized from your documents.",
+    description: "Industry patterns, process variations, tribal knowledge, and exceptions — the full picture of what's in your data.",
   },
-  kpis: {
-    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
-    description: "Key performance indicators with trends, derived from numeric and tabular data in your documents.",
+  insights: {
+    icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
+    description: "Gap analysis and actionable recommendations — what's missing and what should change.",
   },
   knowledge: {
     icon: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1",
-    description: "The complete map — every person, process, system, concept, and organization found, and how they all connect. Click any node for details.",
+    description: "The FORMAL map — official entities and documented relationships. Every person, process, system, and concept, and how they connect.",
   },
   context: {
     icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-    description: "The executive overview — the most important entities across all categories and their strategic relationships, in one 360° view. Think of it as the CXO snapshot.",
+    description: "The HIDDEN intelligence layer — how tribal knowledge, exceptions, and undocumented patterns create informal dependencies. This is the context that powers autonomous decisions.",
   },
 };
 
@@ -36,9 +35,12 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
   const [fullscreenGraph, setFullscreenGraph] = useState<"knowledge" | "context" | null>(null);
   const [showInfo, setShowInfo] = useState(true);
 
-  const tabs: { id: Tab; label: string }[] = [
+  const gapCount = (analysis.gap_analysis || []).length;
+  const recsCount = (analysis.recommendations || []).length;
+
+  const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "patterns", label: "Patterns" },
-    { id: "kpis", label: "KPIs" },
+    { id: "insights", label: "Insights", count: gapCount + recsCount },
     { id: "knowledge", label: "Knowledge Graph" },
     { id: "context", label: "Context Graph" },
   ];
@@ -54,8 +56,8 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {fullscreenGraph === "knowledge"
-                ? "Complete entity map — all people, processes, systems, concepts, and organizations"
-                : "360° executive overview — the most important entities and their strategic connections"}
+                ? "Formal entity map — official relationships and documented connections"
+                : "Hidden intelligence layer — tribal knowledge, exceptions, and undocumented dependencies"}
             </p>
           </div>
           <button
@@ -86,13 +88,18 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 flex items-center gap-1.5 ${
               activeTab === tab.id
                 ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
                 : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
             {tab.label}
+            {tab.count !== undefined && tab.count > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-medium">
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -118,15 +125,20 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
         </div>
       )}
 
-      {/* Scrollable content for patterns/KPIs */}
-      {(activeTab === "patterns" || activeTab === "kpis") && (
+      {/* Scrollable content for patterns and insights */}
+      {activeTab === "patterns" && (
         <div className="flex-1 overflow-auto p-4">
-          {activeTab === "patterns" && <PatternCards analysis={analysis} />}
-          {activeTab === "kpis" && <KPITable kpis={analysis.kpis || []} />}
+          <PatternCards analysis={analysis} />
         </div>
       )}
 
-      {/* Full-height graph containers — no padding, no scroll, fill available space */}
+      {activeTab === "insights" && (
+        <div className="flex-1 overflow-auto p-4">
+          <InsightsView analysis={analysis} />
+        </div>
+      )}
+
+      {/* Full-height graph containers */}
       {activeTab === "knowledge" && (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="flex justify-end px-4 pt-2 pb-1 flex-shrink-0">
@@ -161,6 +173,112 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           </div>
           <div className="flex-1 min-h-0 px-4 pb-3">
             <ContextGraph data={analysis.context_graph} analysis={analysis} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Insights View ──────────────────────────────────────── */
+function InsightsView({ analysis }: { analysis: AnalysisOutput }) {
+  const gaps = analysis.gap_analysis || [];
+  const recs = analysis.recommendations || [];
+
+  if (gaps.length === 0 && recs.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-400 dark:text-slate-500">
+        <p className="text-sm">No gaps or recommendations found</p>
+        <p className="text-xs mt-1">Try uploading more detailed operational documents</p>
+      </div>
+    );
+  }
+
+  const GAP_TYPE_COLORS: Record<string, string> = {
+    process_gap: "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300",
+    knowledge_gap: "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300",
+    technology_gap: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
+    ownership_gap: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+  };
+
+  const GAP_TYPE_LABELS: Record<string, string> = {
+    process_gap: "Process Gap",
+    knowledge_gap: "Knowledge Gap",
+    technology_gap: "Technology Gap",
+    ownership_gap: "Ownership Gap",
+  };
+
+  const RISK_COLORS: Record<string, string> = {
+    high: "text-red-600 dark:text-red-400",
+    medium: "text-yellow-600 dark:text-yellow-400",
+    low: "text-green-600 dark:text-green-400",
+  };
+
+  const PRIORITY_COLORS: Record<string, string> = {
+    high: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300",
+    low: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Gap Analysis */}
+      {gaps.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-500" />
+            Gap Analysis ({gaps.length})
+          </h3>
+          <div className="space-y-3">
+            {gaps.map((gap, i) => (
+              <div key={i} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">{gap.title}</h4>
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${GAP_TYPE_COLORS[gap.gap_type] || "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300"}`}>
+                    {GAP_TYPE_LABELS[gap.gap_type] || gap.gap_type || "Gap"}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{gap.description}</p>
+                <div className="flex items-center gap-4 mt-2">
+                  <span className={`text-xs font-medium ${RISK_COLORS[gap.risk_level] || RISK_COLORS.medium}`}>
+                    Risk: {gap.risk_level}
+                  </span>
+                  {gap.recommendation && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <span className="font-medium">Fix:</span> {gap.recommendation}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {recs.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-teal-500" />
+            Recommendations ({recs.length})
+          </h3>
+          <div className="space-y-3">
+            {recs.map((rec, i) => (
+              <div key={i} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">{rec.title}</h4>
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${PRIORITY_COLORS[rec.priority] || PRIORITY_COLORS.medium}`}>
+                    {rec.priority} priority
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{rec.description}</p>
+                {rec.effort && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                    <span className="font-medium">Effort:</span> {rec.effort}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

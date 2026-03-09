@@ -12,6 +12,19 @@ const CONFIDENCE_COLORS = {
   low: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
 };
 
+const GAP_TYPE_LABELS: Record<string, string> = {
+  process_gap: "Process",
+  knowledge_gap: "Knowledge",
+  technology_gap: "Technology",
+  ownership_gap: "Ownership",
+};
+
+const PRIORITY_COLORS = {
+  high: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+  medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300",
+  low: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
+};
+
 export default function PatternCards({ analysis }: PatternCardsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -37,19 +50,19 @@ export default function PatternCards({ analysis }: PatternCardsProps) {
         }))}
       />
 
-      {/* Client Patterns */}
+      {/* Process Variations */}
       <PatternCard
-        title="Client Patterns"
+        title="Process Variations"
         color="green"
-        items={analysis.client_patterns.map((p) => ({
+        items={(analysis.process_variations || []).map((p) => ({
           title: p.title,
           description: p.description,
-          badge: p.frequency,
-          details: (
+          badge: p.trigger ? `Trigger: ${p.trigger.slice(0, 30)}` : undefined,
+          details: p.impact ? (
             <p className="text-xs text-slate-500 mt-1">
-              <span className="font-medium">Impact:</span> {p.business_impact}
+              <span className="font-medium">Impact:</span> {p.impact}
             </p>
-          ),
+          ) : null,
         }))}
       />
 
@@ -86,6 +99,40 @@ export default function PatternCards({ analysis }: PatternCardsProps) {
           ),
         }))}
       />
+
+      {/* Gap Analysis */}
+      <PatternCard
+        title="Gap Analysis"
+        color="purple"
+        items={(analysis.gap_analysis || []).map((g) => ({
+          title: g.title,
+          description: g.description,
+          badge: GAP_TYPE_LABELS[g.gap_type] || g.gap_type || "Gap",
+          badgeClass: CONFIDENCE_COLORS[g.risk_level],
+          details: g.recommendation ? (
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="font-medium">Recommendation:</span> {g.recommendation}
+            </p>
+          ) : null,
+        }))}
+      />
+
+      {/* Recommendations */}
+      <PatternCard
+        title="Recommendations"
+        color="teal"
+        items={(analysis.recommendations || []).map((r) => ({
+          title: r.title,
+          description: r.description,
+          badge: `Priority: ${r.priority}`,
+          badgeClass: PRIORITY_COLORS[r.priority] || PRIORITY_COLORS.medium,
+          details: r.effort ? (
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="font-medium">Effort:</span> {r.effort}
+            </p>
+          ) : null,
+        }))}
+      />
     </div>
   );
 }
@@ -100,7 +147,7 @@ interface CardItem {
 
 interface PatternCardProps {
   title: string;
-  color: "blue" | "green" | "amber" | "red";
+  color: "blue" | "green" | "amber" | "red" | "purple" | "teal";
   items: CardItem[];
 }
 
@@ -109,6 +156,8 @@ const COLOR_MAP = {
   green: { bg: "bg-green-50 dark:bg-green-950/40", border: "border-green-200 dark:border-green-800", header: "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-300", badge: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300" },
   amber: { bg: "bg-amber-50 dark:bg-amber-950/40", border: "border-amber-200 dark:border-amber-800", header: "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300", badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300" },
   red: { bg: "bg-red-50 dark:bg-red-950/40", border: "border-red-200 dark:border-red-800", header: "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300", badge: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300" },
+  purple: { bg: "bg-purple-50 dark:bg-purple-950/40", border: "border-purple-200 dark:border-purple-800", header: "bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300", badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300" },
+  teal: { bg: "bg-teal-50 dark:bg-teal-950/40", border: "border-teal-200 dark:border-teal-800", header: "bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300", badge: "bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300" },
 };
 
 function PatternCard({ title, color, items }: PatternCardProps) {
