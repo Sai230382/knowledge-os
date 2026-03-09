@@ -511,7 +511,7 @@ async def refine_analysis(
         f"Return the COMPLETE updated analysis JSON."
     )
 
-    data = await _call_and_parse(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=16384)
+    data = await _call_and_parse(client, REFINE_SYSTEM_PROMPT, prompt, max_tokens=12000)
     return AnalysisOutput(**data)
 
 

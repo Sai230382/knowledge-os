@@ -162,21 +162,26 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
       const updatedAnalysis = await refineAnalysis(currentResult.analysis, query);
 
       const oldNodes = currentResult.analysis.knowledge_graph.nodes.length;
-      const newNodes = updatedAnalysis.knowledge_graph.nodes.length;
+      const newNodes = updatedAnalysis.knowledge_graph?.nodes?.length || 0;
       const oldPatterns = currentResult.analysis.industry_patterns.length + currentResult.analysis.client_patterns.length;
-      const newPatterns = updatedAnalysis.industry_patterns.length + updatedAnalysis.client_patterns.length;
+      const newPatterns = (updatedAnalysis.industry_patterns?.length || 0) + (updatedAnalysis.client_patterns?.length || 0);
 
-      const changes: string[] = [];
-      if (newNodes !== oldNodes) changes.push(`${newNodes > oldNodes ? "+" : ""}${newNodes - oldNodes} graph nodes`);
-      if (newPatterns !== oldPatterns) changes.push(`${newPatterns > oldPatterns ? "+" : ""}${newPatterns - oldPatterns} patterns`);
-      const summary = changes.length > 0 ? `Updated: ${changes.join(", ")}` : "Analysis refined successfully";
+      // Safety check: if refine returned empty/broken results, keep the original
+      if (newNodes === 0 && oldNodes > 0) {
+        setQueryHistory((prev) => [...prev, { role: "assistant", text: "Refinement returned empty results — keeping your original analysis safe." }]);
+      } else {
+        const changes: string[] = [];
+        if (newNodes !== oldNodes) changes.push(`${newNodes > oldNodes ? "+" : ""}${newNodes - oldNodes} graph nodes`);
+        if (newPatterns !== oldPatterns) changes.push(`${newPatterns > oldPatterns ? "+" : ""}${newPatterns - oldPatterns} patterns`);
+        const summary = changes.length > 0 ? `Updated: ${changes.join(", ")}` : "Analysis refined successfully";
 
-      setQueryHistory((prev) => [...prev, { role: "assistant", text: summary }]);
+        setQueryHistory((prev) => [...prev, { role: "assistant", text: summary }]);
 
-      onResult({
-        ...currentResult,
-        analysis: updatedAnalysis,
-      });
+        onResult({
+          ...currentResult,
+          analysis: updatedAnalysis,
+        });
+      }
     } catch (err: unknown) {
       const msg = getErrorMessage(err, "Failed to refine analysis");
       setQueryHistory((prev) => [...prev, { role: "assistant", text: `Error: ${msg}` }]);
