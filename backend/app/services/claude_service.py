@@ -4,6 +4,7 @@ import logging
 import asyncio
 import time
 import anthropic
+from json_repair import repair_json
 from app.config import settings
 from app.schemas.claude_schemas import AnalysisOutput
 
@@ -14,81 +15,28 @@ CHUNK_SIZE = 80000
 # Max tables per chunk
 TABLES_PER_CHUNK = 15
 
-SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. You analyze business documents and extract structured knowledge. You always respond in valid JSON matching the exact schema provided.
+SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. Analyze documents and respond with valid JSON.
 
-Your analysis categories:
+Extract these 6 categories:
 
-1. INDUSTRY PATTERNS: Recurring trends, market dynamics, regulatory themes, competitive patterns observed across the content. Each pattern should have a title, description, confidence level (high/medium/low), and supporting evidence (direct quotes or references).
+1. INDUSTRY PATTERNS: Trends, market dynamics, regulatory themes. Max 5.
+2. CLIENT PATTERNS: Client behaviors, pain points, decision patterns. Max 5.
+3. TRIBAL KNOWLEDGE: Undocumented expertise, informal rules, workarounds. Max 5.
+4. EXCEPTIONS: Edge cases, anomalies, special handling. Max 5.
+5. KNOWLEDGE GRAPH: People, processes, technologies, concepts, organizations. Max 20 nodes, 30 edges.
+6. CONTEXT GRAPH: High-level 360° view of how key entities interconnect. Max 15 nodes, 20 edges.
 
-2. CLIENT PATTERNS: Client behaviors, preferences, decision-making patterns, common requests, pain points, and relationship dynamics. Each pattern should have a title, description, frequency indicator, and business impact assessment.
+JSON Schema:
+{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"client_patterns":[{"title":"str","description":"str","frequency":"str","business_impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept|organization","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept|organization","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.7}]},"kpis":null}
 
-3. TRIBAL KNOWLEDGE: Undocumented expertise, institutional memory, informal rules, workarounds, and "how things really work" insights that are not in formal documentation. Each item should have a title, description, risk level if lost, recommended formalization action, AND a list of related entity IDs from the knowledge graph that this tribal knowledge applies to.
-
-4. EXCEPTIONS: Edge cases, anomalies, deviations from standard processes, special handling requirements, and one-off situations. Each exception should have a title, description, trigger conditions, handling procedure, AND a list of related entity IDs from the knowledge graph that this exception applies to.
-
-5. KNOWLEDGE GRAPH ENTITIES: Extract all People, Processes, Technologies, Concepts, and Organizations mentioned. For each entity, provide:
-   - id: unique lowercase slug
-   - label: display name
-   - type: person|process|technology|concept|organization
-   - description: a brief 1-2 sentence summary of what this entity is/does in context
-   - relationships to other entities with labeled edges
-
-6. CONTEXT GRAPH (360° VIEW): Create a high-level relationship map that shows how ALL entity types interconnect across the organization. This is a bird's-eye view of the entire ecosystem — not just concepts, but the full picture:
-   - Include nodes of ALL types: key people, core processes, critical technologies, strategic concepts, and organizations
-   - Show CROSS-CATEGORY relationships: which people own which processes, which technologies enable which processes, which organizations depend on which technologies, etc.
-   - Use relationship labels like "owns", "manages", "depends on", "feeds into", "enables", "conflicts with", "supports", "governs", "uses", "produces"
-   - Focus on the most important 15-25 entities that tell the complete story
-   - This graph should give a CXO a complete picture of how everything connects in one view
-
-7. KPIs (only when tabular/numeric data is present): Derive key performance indicators from any numeric data. For each KPI provide the metric name, current value, trend direction (up/down/stable), and an explanatory note about what it means and why it matters. If no numeric data is present, set kpis to null.
-
-Response JSON Schema (respond ONLY with this JSON, no other text):
-{
-  "industry_patterns": [
-    {"title": "string", "description": "string", "confidence": "high|medium|low", "evidence": ["string"]}
-  ],
-  "client_patterns": [
-    {"title": "string", "description": "string", "frequency": "string", "business_impact": "string"}
-  ],
-  "tribal_knowledge": [
-    {"title": "string", "description": "string", "risk_if_lost": "high|medium|low", "formalization_action": "string", "related_entities": ["entity-id-slug"]}
-  ],
-  "exceptions": [
-    {"title": "string", "description": "string", "trigger": "string", "handling": "string", "related_entities": ["entity-id-slug"]}
-  ],
-  "knowledge_graph": {
-    "nodes": [
-      {"id": "unique-slug", "label": "Display Name", "type": "person|process|technology|concept|organization", "description": "Brief description of this entity"}
-    ],
-    "edges": [
-      {"source": "node-id", "target": "node-id", "label": "relationship description", "strength": 0.8}
-    ]
-  },
-  "context_graph": {
-    "nodes": [
-      {"id": "unique-slug", "label": "Display Name", "type": "person|process|technology|concept|organization", "description": "Brief description of this entity and its role"}
-    ],
-    "edges": [
-      {"source": "node-id", "target": "node-id", "label": "depends on|feeds into|enables|etc", "strength": 0.7}
-    ]
-  },
-  "kpis": [
-    {"metric": "string", "value": "string", "trend": "up|down|stable", "note": "string"}
-  ]
-}
-
-IMPORTANT OUTPUT RULES:
-- BE CONCISE: Keep descriptions to 1-2 short sentences max
-- LIMIT OUTPUT: Max 5 industry patterns, 5 client patterns, 5 tribal knowledge, 5 exceptions, 10 KPIs
-- Knowledge graph: max 20 most important nodes, max 30 edges
-- Context graph: max 15 most important nodes, max 20 edges
-- All entity IDs must be unique lowercase slugs
-- Every edge must reference valid node IDs that exist in the nodes array
-- related_entities must reference valid knowledge_graph node IDs
-- Every node MUST have a description field
-- If no numeric data exists, set "kpis" to null
-- Respond ONLY with valid JSON, no markdown formatting or code blocks
-- Use COMPACT JSON (no whitespace/indentation) to minimize output size"""
+RULES:
+- Keep descriptions to 1-2 sentences
+- All entity IDs: unique lowercase slugs
+- All edges must reference valid node IDs
+- related_entities must reference knowledge_graph node IDs
+- Every node needs a description
+- Set kpis to null (not used)
+- Respond ONLY with valid JSON, no markdown, no code blocks"""
 
 
 MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. You receive multiple partial analyses of a large document (each from a different section/chunk) and merge them into one unified, comprehensive analysis.
@@ -173,7 +121,7 @@ def _close_truncated_json(text: str) -> str:
 
 
 def _parse_claude_json(raw_text: str) -> dict:
-    """Parse JSON from Claude's response, with repair for common LLM JSON mistakes."""
+    """Parse JSON from Claude's response using json-repair for bulletproof handling."""
     raw_text = raw_text.strip()
 
     # Strip markdown code fences if present
@@ -183,34 +131,27 @@ def _parse_claude_json(raw_text: str) -> dict:
     if raw_text.endswith("```"):
         raw_text = raw_text[:-3].strip()
 
-    # Try to extract JSON if there's any surrounding text
+    # Try to extract JSON object if there's surrounding text
     json_match = re.search(r'\{[\s\S]*\}', raw_text)
     if json_match:
         raw_text = json_match.group(0)
 
-    # First try: parse as-is
+    # First try: parse as-is (fastest path)
     try:
         return json.loads(raw_text)
     except json.JSONDecodeError:
         pass
 
-    # Second try: repair common issues and parse again
-    repaired = _repair_json(raw_text)
-    try:
-        return json.loads(repaired)
-    except json.JSONDecodeError:
-        pass
+    # Second try: json-repair handles unescaped quotes, trailing commas,
+    # missing commas, truncated JSON, and many other LLM JSON issues
+    logger.warning("json.loads failed, using json-repair...")
+    fixed = repair_json(raw_text, return_objects=True)
+    if isinstance(fixed, dict):
+        logger.info("json-repair returned dict directly")
+        return fixed
 
-    # Third try: close truncated JSON (when output hit max_tokens)
-    logger.warning("Attempting truncated JSON recovery...")
-    closed = _close_truncated_json(repaired)
-    try:
-        return json.loads(closed)
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON parse failed even after repair + truncation fix: {e}")
-        logger.error(f"First 500 chars: {raw_text[:500]}")
-        logger.error(f"Last 500 chars: {raw_text[-500:]}")
-        raise
+    # repair_json returned a string, parse it
+    return json.loads(str(fixed))
 
 
 async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> str:
@@ -248,195 +189,10 @@ async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_promp
                 raise
 
 
-ANALYSIS_TOOL = {
-    "name": "submit_analysis",
-    "description": "Submit the structured knowledge analysis results extracted from the document.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "industry_patterns": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "description": {"type": "string"},
-                        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-                        "evidence": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["title", "description", "confidence", "evidence"],
-                },
-            },
-            "client_patterns": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "description": {"type": "string"},
-                        "frequency": {"type": "string"},
-                        "business_impact": {"type": "string"},
-                    },
-                    "required": ["title", "description", "frequency", "business_impact"],
-                },
-            },
-            "tribal_knowledge": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "description": {"type": "string"},
-                        "risk_if_lost": {"type": "string", "enum": ["high", "medium", "low"]},
-                        "formalization_action": {"type": "string"},
-                        "related_entities": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["title", "description", "risk_if_lost", "formalization_action", "related_entities"],
-                },
-            },
-            "exceptions": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "description": {"type": "string"},
-                        "trigger": {"type": "string"},
-                        "handling": {"type": "string"},
-                        "related_entities": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["title", "description", "trigger", "handling", "related_entities"],
-                },
-            },
-            "knowledge_graph": {
-                "type": "object",
-                "properties": {
-                    "nodes": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "label": {"type": "string"},
-                                "type": {"type": "string", "enum": ["person", "process", "technology", "concept", "organization"]},
-                                "description": {"type": "string"},
-                            },
-                            "required": ["id", "label", "type", "description"],
-                        },
-                    },
-                    "edges": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "source": {"type": "string"},
-                                "target": {"type": "string"},
-                                "label": {"type": "string"},
-                                "strength": {"type": "number"},
-                            },
-                            "required": ["source", "target", "label", "strength"],
-                        },
-                    },
-                },
-                "required": ["nodes", "edges"],
-            },
-            "context_graph": {
-                "type": "object",
-                "properties": {
-                    "nodes": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "label": {"type": "string"},
-                                "type": {"type": "string", "enum": ["person", "process", "technology", "concept", "organization"]},
-                                "description": {"type": "string"},
-                            },
-                            "required": ["id", "label", "type", "description"],
-                        },
-                    },
-                    "edges": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "source": {"type": "string"},
-                                "target": {"type": "string"},
-                                "label": {"type": "string"},
-                                "strength": {"type": "number"},
-                            },
-                            "required": ["source", "target", "label", "strength"],
-                        },
-                    },
-                },
-                "required": ["nodes", "edges"],
-            },
-            "kpis": {
-                "type": ["array", "null"],
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "metric": {"type": "string"},
-                        "value": {"type": "string"},
-                        "trend": {"type": "string", "enum": ["up", "down", "stable"]},
-                        "note": {"type": "string"},
-                    },
-                    "required": ["metric", "value", "trend", "note"],
-                },
-            },
-        },
-        "required": ["industry_patterns", "client_patterns", "tribal_knowledge", "exceptions", "knowledge_graph", "context_graph", "kpis"],
-    },
-}
-
-
 async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> dict:
-    """Call Claude using tool use for GUARANTEED valid JSON output.
-    The API uses constrained decoding — no more JSON parse errors ever.
-    Falls back to raw text parsing if tool use fails for any reason.
-    """
-    max_retries = 3
-    for retry in range(max_retries):
-        try:
-            t0 = time.time()
-            response = await client.messages.create(
-                model=settings.claude_model,
-                max_tokens=max_tokens,
-                system=[{
-                    "type": "text",
-                    "text": system,
-                    "cache_control": {"type": "ephemeral"},
-                }],
-                messages=[{"role": "user", "content": user_prompt}],
-                tools=[ANALYSIS_TOOL],
-                tool_choice={"type": "tool", "name": "submit_analysis"},
-            )
-            logger.info(
-                f"Claude tool-use call: {time.time() - t0:.1f}s, "
-                f"in={response.usage.input_tokens} out={response.usage.output_tokens} "
-                f"stop={response.stop_reason}"
-            )
-
-            # Extract the tool call result — already a valid dict!
-            for block in response.content:
-                if block.type == "tool_use" and block.name == "submit_analysis":
-                    logger.info("Tool use response parsed successfully")
-                    return block.input
-
-            # Fallback: if no tool call found, try text parsing
-            for block in response.content:
-                if hasattr(block, "text"):
-                    return _parse_claude_json(block.text)
-
-            raise ValueError("No tool call or text in Claude response")
-
-        except anthropic.RateLimitError:
-            wait_time = 30 * (retry + 1)
-            logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {retry + 1}/{max_retries}...")
-            await asyncio.sleep(wait_time)
-            if retry == max_retries - 1:
-                raise
+    """Call Claude and parse JSON response using json-repair for bulletproof parsing."""
+    raw = await _call_claude(client, system, user_prompt, max_tokens)
+    return _parse_claude_json(raw)
 
 
 def _split_text_into_chunks(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:

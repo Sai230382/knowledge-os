@@ -6,6 +6,7 @@ python-pptx
 openpyxl
 pdfplumber
 anthropic
+json-repair
 pydantic-settings
 python-dotenv
 httpx
