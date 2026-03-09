@@ -4,12 +4,18 @@ from .docx_processor import DocxProcessor
 from .pptx_processor import PptxProcessor
 from .xlsx_processor import XlsxProcessor
 from .pdf_processor import PdfProcessor
+from .txt_processor import TxtProcessor
 
 PROCESSORS: dict[str, type[BaseProcessor]] = {
     ".docx": DocxProcessor,
     ".pptx": PptxProcessor,
     ".xlsx": XlsxProcessor,
     ".pdf": PdfProcessor,
+    ".txt": TxtProcessor,
+    ".csv": TxtProcessor,
+    ".md": TxtProcessor,
+    ".json": TxtProcessor,
+    ".log": TxtProcessor,
 }
 
 SUPPORTED_EXTENSIONS = set(PROCESSORS.keys())

@@ -6,7 +6,7 @@ interface FileUploaderProps {
   isLoading: boolean;
 }
 
-const ACCEPTED = ".docx,.pptx,.xlsx,.pdf";
+const ACCEPTED = ".docx,.pptx,.xlsx,.pdf,.txt,.csv,.md,.json,.log";
 
 export default function FileUploader({ onSubmit, isLoading }: FileUploaderProps) {
   const [files, setFiles] = useState<File[]>([]);
@@ -17,7 +17,7 @@ export default function FileUploader({ onSubmit, isLoading }: FileUploaderProps)
     if (!newFiles) return;
     const valid = Array.from(newFiles).filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase();
-      return ["docx", "pptx", "xlsx", "pdf"].includes(ext || "");
+      return ["docx", "pptx", "xlsx", "pdf", "txt", "csv", "md", "json", "log"].includes(ext || "");
     });
     setFiles((prev) => [...prev, ...valid]);
   }, []);
@@ -78,7 +78,7 @@ export default function FileUploader({ onSubmit, isLoading }: FileUploaderProps)
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
           <p className="text-sm">Drag & drop files here, or click to browse</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Supports: Word, PowerPoint, Excel, PDF</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Supports: Word, PowerPoint, Excel, PDF, TXT, CSV</p>
         </div>
       </div>
 
