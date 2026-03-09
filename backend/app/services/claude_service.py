@@ -58,9 +58,10 @@ Your job:
 1. MERGE all industry patterns, client patterns, tribal knowledge, and exceptions — deduplicate similar items, combine evidence, and keep the best version of each.
 2. MERGE knowledge graphs — deduplicate nodes by their ID or similar names, merge edges, and ensure all edges reference valid node IDs.
 3. MERGE context graphs — same deduplication and merging rules.
-4. MERGE KPIs — deduplicate metrics, pick the most accurate/recent value, and combine notes.
-5. Where multiple chunks found the same pattern/entity, INCREASE the confidence level and merge the evidence lists.
-6. Create cross-chunk connections — if an entity in chunk 1 relates to an entity in chunk 3, add that edge.
+4. Where multiple chunks found the same pattern/entity, INCREASE the confidence level and merge the evidence lists.
+5. Create cross-chunk connections — if an entity in chunk 1 relates to an entity in chunk 3, add that edge.
+
+ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 
 Respond with the SAME JSON schema as the individual analyses. Respond ONLY with valid JSON, no markdown formatting or code blocks.
 
@@ -70,7 +71,7 @@ IMPORTANT:
 - Deduplicate aggressively — the final result should be clean and non-repetitive
 - related_entities in tribal_knowledge and exceptions MUST reference valid node IDs from the merged knowledge_graph
 - Every node MUST have a description field
-- If no numeric data exists across any chunk, set "kpis" to null"""
+- Set kpis to null (not used)"""
 
 
 def _repair_json(text: str) -> str:
@@ -472,16 +473,21 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     return AnalysisOutput(**data), num_chunks
 
 
-REFINE_SYSTEM_PROMPT = """You are a Knowledge Analysis Assistant. You have a current analysis of a document (with patterns, knowledge graphs, KPIs, etc.) and the user wants to refine, query, or expand it.
+REFINE_SYSTEM_PROMPT = """You are a Knowledge Analysis Assistant. You have a current analysis of a document and the user wants to refine, query, or expand it.
 
 Based on the user's request, produce an UPDATED version of the analysis JSON. You may:
-- Add new patterns, entities, or KPIs that the user asks about
+- Add new patterns or entities the user asks about
 - Remove items the user says are irrelevant
 - Expand details on specific areas
 - Add new graph connections the user identifies
 - Adjust confidence levels based on user feedback
-- Add new context graph nodes/edges for themes the user wants explored
-- Answer the user's question by incorporating the answer INTO the analysis (e.g., add a new pattern or insight)
+- Answer the user's question by incorporating the answer INTO the analysis
+
+ENTITY TYPES — use ONLY these 4: person, process, technology, concept
+- person: People, roles, teams, departments, organizations
+- process: Workflows, procedures, operations, business rules, pipelines
+- technology: Software, systems, tools, platforms, data sources, integrations
+- concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 IMPORTANT RULES:
 - Always return the COMPLETE updated analysis JSON (not just the changes)
@@ -490,7 +496,11 @@ IMPORTANT RULES:
 - Every edge must reference valid node IDs
 - related_entities must reference valid knowledge_graph node IDs
 - Every node MUST have a description field
-- Respond ONLY with valid JSON matching the original schema, no markdown or extra text"""
+- Set kpis to null (not used)
+- Respond ONLY with valid JSON matching the original schema, no markdown or extra text
+
+JSON Schema:
+{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"client_patterns":[{"title":"str","description":"str","frequency":"str","business_impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.7}]},"kpis":null}"""
 
 
 async def refine_analysis(
@@ -523,18 +533,24 @@ ACCUMULATE_SYSTEM_PROMPT = """You are a Knowledge Accumulation Specialist. You h
 
 Rules:
 - Keep ALL existing knowledge — never drop previous findings
-- Add all NEW patterns, entities, KPIs from the new analysis
+- Add all NEW patterns and entities from the new analysis
 - Deduplicate — if the same entity/pattern appears in both, merge them (combine evidence, take higher confidence)
 - Create CROSS-DOCUMENT connections — if an entity from the old analysis relates to one from the new analysis, add that edge
-- Update KPIs if newer values are available
 - Expand the knowledge and context graphs with new nodes and edges
 - The result should represent the ACCUMULATED knowledge across all documents
+
+ENTITY TYPES — use ONLY these 4: person, process, technology, concept
+- person: People, roles, teams, departments, organizations
+- process: Workflows, procedures, operations, business rules, pipelines
+- technology: Software, systems, tools, platforms, data sources, integrations
+- concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 IMPORTANT:
 - All entity IDs must be unique lowercase slugs
 - Every edge must reference valid node IDs
 - related_entities must reference valid knowledge_graph node IDs
 - Every node MUST have a description field
+- Set kpis to null (not used)
 - Respond ONLY with valid JSON, no markdown or extra text"""
 
 
