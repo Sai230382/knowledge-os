@@ -21,6 +21,9 @@ interface ForceConfig {
 interface UseForceGraphOptions {
   onNodeClick?: (node: GraphNode) => void;
   entityIndicators?: Record<string, { hasTribal: boolean; hasException: boolean }>;
+  edgeLabelMaxLength?: number; // 0 = hide, undefined = full
+  nodeLabelMaxLength?: number; // undefined = full
+  edgeColorFn?: (edge: GraphEdge) => string; // custom edge coloring
 }
 
 export function useForceGraph(
@@ -156,20 +159,26 @@ export function useForceGraph(
     // Edges
     const linkGroup = g.append("g").attr("class", "links");
 
+    const edgeColorFn = options?.edgeColorFn;
     const links = linkGroup
       .selectAll("line")
       .data(edges)
       .join("line")
-      .attr("stroke", edgeColor)
-      .attr("stroke-width", 1.5)
-      .attr("stroke-opacity", 0.5)
+      .attr("stroke", (d) => edgeColorFn ? edgeColorFn(d) : edgeColor)
+      .attr("stroke-width", (d) => edgeColorFn ? 2 : 1.5)
+      .attr("stroke-opacity", (d) => edgeColorFn ? 0.7 : 0.5)
       .attr("marker-end", "url(#arrowhead)");
 
+    const edgeLabelMax = options?.edgeLabelMaxLength;
     const linkLabels = linkGroup
       .selectAll("text")
       .data(edges)
       .join("text")
-      .text((d) => d.label)
+      .text((d) => {
+        if (edgeLabelMax === 0) return "";
+        if (edgeLabelMax && d.label.length > edgeLabelMax) return d.label.slice(0, edgeLabelMax) + "...";
+        return d.label;
+      })
       .attr("font-size", 9)
       .attr("text-anchor", "middle")
       .attr("fill", edgeLabelColor)
@@ -210,7 +219,8 @@ export function useForceGraph(
             typeof e.target === "string"
               ? e.target
               : (e.target as GraphNode).id;
-          return src === d.id || tgt === d.id ? "#3B82F6" : edgeColor;
+          if (src === d.id || tgt === d.id) return "#3B82F6";
+          return edgeColorFn ? edgeColorFn(e) : edgeColor;
         })
         .attr("stroke-width", (e) => {
           const src =
@@ -221,7 +231,7 @@ export function useForceGraph(
             typeof e.target === "string"
               ? e.target
               : (e.target as GraphNode).id;
-          return src === d.id || tgt === d.id ? 2.5 : 1.5;
+          return src === d.id || tgt === d.id ? 3 : (edgeColorFn ? 2 : 1.5);
         })
         .attr("stroke-opacity", (e) => {
           const src =
@@ -262,9 +272,9 @@ export function useForceGraph(
         .attr("stroke-width", 2.5)
         .attr("filter", "drop-shadow(0 1px 3px rgba(0,0,0,0.2))");
       links
-        .attr("stroke", edgeColor)
-        .attr("stroke-width", 1.5)
-        .attr("stroke-opacity", 0.5);
+        .attr("stroke", (d) => edgeColorFn ? edgeColorFn(d) : edgeColor)
+        .attr("stroke-width", edgeColorFn ? 2 : 1.5)
+        .attr("stroke-opacity", edgeColorFn ? 0.7 : 0.5);
       nodeGs.style("opacity", 1);
     }
 
@@ -383,10 +393,18 @@ export function useForceGraph(
       .attr("fill", "#fff")
       .attr("pointer-events", "none");
 
-    // Node labels
+    // Node labels — truncate at word boundary
+    const nodeLabelMax = options?.nodeLabelMaxLength;
     nodeGs
       .append("text")
-      .text((d) => d.label)
+      .text((d) => {
+        if (nodeLabelMax && d.label.length > nodeLabelMax) {
+          const truncated = d.label.slice(0, nodeLabelMax);
+          const lastSpace = truncated.lastIndexOf(" ");
+          return (lastSpace > nodeLabelMax * 0.4 ? truncated.slice(0, lastSpace) : truncated) + "...";
+        }
+        return d.label;
+      })
       .attr("dy", 28)
       .attr("text-anchor", "middle")
       .attr("font-size", 11)

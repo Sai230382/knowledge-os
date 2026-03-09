@@ -4,8 +4,8 @@ import { useForceGraph } from "@/hooks/useForceGraph";
 import GraphLegend from "./GraphLegend";
 import GraphControls from "./GraphControls";
 import NodeDetailPanel from "./NodeDetailPanel";
-import { GraphData, GraphNode, GraphEdge, AnalysisOutput } from "@/lib/types";
-import { CONTEXT_GRAPH_CONFIG, getNodeColor, getNodeLabel } from "@/lib/constants";
+import { GraphData, GraphNode, GraphEdge, ContextEdge, AnalysisOutput } from "@/lib/types";
+import { CONTEXT_GRAPH_CONFIG, getNodeColor, getNodeLabel, CONTEXT_TYPE_COLORS, CONTEXT_TYPE_LABELS } from "@/lib/constants";
 
 type HopLevel = "all" | 1 | 2;
 
@@ -110,8 +110,16 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
     }
   }, []);
 
+  const edgeColorFn = useCallback((edge: GraphEdge) => {
+    const ctxType = (edge as ContextEdge).context_type || "";
+    return CONTEXT_TYPE_COLORS[ctxType] || "#94A3B8";
+  }, []);
+
   useForceGraph(svgRef, filteredData, dimensions, CONTEXT_GRAPH_CONFIG, {
     onNodeClick: handleNodeClick,
+    edgeLabelMaxLength: 0, // Hide edge labels — details in panel
+    nodeLabelMaxLength: 25,
+    edgeColorFn,
   });
 
   if (data.nodes.length === 0) {
@@ -149,6 +157,15 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
             />
             <span className="text-xs text-slate-600 dark:text-slate-400">
               {getNodeLabel(type)}: <span className="font-semibold">{count}</span>
+            </span>
+          </div>
+        ))}
+        <div className="h-3 border-l border-slate-300 dark:border-slate-600" />
+        {Object.entries(CONTEXT_TYPE_COLORS).map(([ctxType, color]) => (
+          <div key={ctxType} className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 rounded" style={{ backgroundColor: color }} />
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+              {CONTEXT_TYPE_LABELS[ctxType] || ctxType}
             </span>
           </div>
         ))}

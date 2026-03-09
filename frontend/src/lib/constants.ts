@@ -28,16 +28,16 @@ export const GRAPH_CONFIG = {
 export const CONTEXT_GRAPH_CONFIG = {
   forces: {
     charge: {
-      strength: -400,
-      distanceMin: 40,
-      distanceMax: 600,
+      strength: -500,
+      distanceMin: 50,
+      distanceMax: 700,
     },
     link: {
-      distance: 160,
-      strength: 0.3,
+      distance: 180,
+      strength: 0.25,
     },
     collision: {
-      radius: 55,
+      radius: 60,
       strength: 0.9,
       iterations: 4,
     },
@@ -50,6 +50,21 @@ export const CONTEXT_GRAPH_CONFIG = {
     velocityDecay: 0.35,
     warmupTicks: 150,
   },
+};
+
+// Edge colors by context_type for context graph
+export const CONTEXT_TYPE_COLORS: Record<string, string> = {
+  tribal_knowledge: "#F59E0B", // amber
+  exception: "#EF4444",        // red
+  hidden_pattern: "#8B5CF6",   // purple
+  workaround: "#3B82F6",       // blue
+};
+
+export const CONTEXT_TYPE_LABELS: Record<string, string> = {
+  tribal_knowledge: "Tribal Knowledge",
+  exception: "Exception",
+  hidden_pattern: "Hidden Pattern",
+  workaround: "Workaround",
 };
 
 export const NODE_COLORS: Record<string, string> = {

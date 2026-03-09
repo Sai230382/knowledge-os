@@ -1,6 +1,6 @@
 "use client";
-import { GraphNode, GraphEdge, TribalKnowledge, ExceptionItem, AnalysisOutput } from "@/lib/types";
-import { getNodeColor, getNodeLabel } from "@/lib/constants";
+import { GraphNode, GraphEdge, ContextEdge, AnalysisOutput } from "@/lib/types";
+import { getNodeColor, getNodeLabel, CONTEXT_TYPE_COLORS, CONTEXT_TYPE_LABELS } from "@/lib/constants";
 
 interface NodeDetailPanelProps {
   node: GraphNode;
@@ -25,11 +25,13 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
     const isSource = sourceId === node.id;
     const otherId = isSource ? targetId : sourceId;
     const otherNode = allNodes.find((n) => n.id === otherId);
+    const contextType = (e as ContextEdge).context_type || "";
     return {
       node: otherNode,
       label: e.label,
       direction: isSource ? "outgoing" : "incoming",
       strength: e.strength,
+      contextType,
     };
   });
 
@@ -98,21 +100,34 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
                     style={{ backgroundColor: conn.node ? getNodeColor(conn.node.type) : "#94A3B8" }}
                   />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                      {conn.node?.label || "Unknown"}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                        {conn.node?.label || "Unknown"}
+                      </p>
+                      {conn.contextType && (
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold text-white flex-shrink-0"
+                          style={{ backgroundColor: CONTEXT_TYPE_COLORS[conn.contextType] || "#94A3B8" }}
+                        >
+                          {CONTEXT_TYPE_LABELS[conn.contextType] || conn.contextType}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                       {conn.direction === "outgoing" ? (
                         <><span className="text-blue-500">{"\u2192"}</span> {conn.label}</>
                       ) : (
                         <><span className="text-green-500">{"\u2190"}</span> {conn.label}</>
                       )}
                     </p>
-                    <div className="mt-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1">
+                    <div className="mt-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1">
                       <div
-                        className="bg-blue-400 h-1 rounded-full"
-                        style={{ width: `${conn.strength * 100}%` }}
+                        className="h-1 rounded-full"
+                        style={{
+                          width: `${conn.strength * 100}%`,
+                          backgroundColor: conn.contextType ? (CONTEXT_TYPE_COLORS[conn.contextType] || "#3B82F6") : "#60A5FA",
+                        }}
                       />
                     </div>
                   </div>
