@@ -10,10 +10,11 @@ from app.schemas.claude_schemas import AnalysisOutput
 
 logger = logging.getLogger(__name__)
 
-# Max chars per chunk sent to Claude (~80K chars ≈ 20K tokens, well within context)
-CHUNK_SIZE = 80000
+# Max chars per chunk sent to Claude (~120K chars ≈ 30K tokens, Haiku handles 200K context)
+# Larger chunks = fewer API calls = lower cost
+CHUNK_SIZE = 120000
 # Max tables per chunk
-TABLES_PER_CHUNK = 15
+TABLES_PER_CHUNK = 20
 
 SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. Analyze documents and respond with valid JSON.
 
@@ -154,7 +155,7 @@ def _parse_claude_json(raw_text: str) -> dict:
     return json.loads(str(fixed))
 
 
-async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> str:
+async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 12000) -> str:
     """Call Claude API asynchronously and return raw text response.
     Uses prompt caching on the system prompt to reduce cost by ~90% on repeated calls.
     Retries automatically on rate limit (429) errors with backoff.
@@ -189,7 +190,7 @@ async def _call_claude(client: anthropic.AsyncAnthropic, system: str, user_promp
                 raise
 
 
-async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 16384) -> dict:
+async def _call_and_parse(client: anthropic.AsyncAnthropic, system: str, user_prompt: str, max_tokens: int = 12000) -> dict:
     """Call Claude and parse JSON response using json-repair for bulletproof parsing."""
     raw = await _call_claude(client, system, user_prompt, max_tokens)
     return _parse_claude_json(raw)
@@ -294,6 +295,61 @@ def _build_chunk_prompt(
     return "\n".join(parts)
 
 
+def _local_merge(chunk_results: list[dict]) -> dict:
+    """Merge chunk results locally (no Claude call) — saves API cost.
+    Simple concatenation + deduplication by node ID.
+    """
+    merged = {
+        "industry_patterns": [],
+        "client_patterns": [],
+        "tribal_knowledge": [],
+        "exceptions": [],
+        "knowledge_graph": {"nodes": [], "edges": []},
+        "context_graph": {"nodes": [], "edges": []},
+        "kpis": None,
+    }
+
+    seen_pattern_titles = set()
+    seen_node_ids = {"knowledge_graph": set(), "context_graph": set()}
+    seen_edge_keys = {"knowledge_graph": set(), "context_graph": set()}
+
+    for result in chunk_results:
+        # Merge pattern lists (dedupe by title)
+        for key in ["industry_patterns", "client_patterns", "tribal_knowledge", "exceptions"]:
+            for item in result.get(key, []):
+                title = item.get("title", "")
+                dedup_key = f"{key}:{title.lower().strip()}"
+                if dedup_key not in seen_pattern_titles:
+                    seen_pattern_titles.add(dedup_key)
+                    merged[key].append(item)
+
+        # Merge graphs (dedupe nodes by ID, edges by source+target)
+        for graph_key in ["knowledge_graph", "context_graph"]:
+            graph = result.get(graph_key, {})
+            for node in graph.get("nodes", []):
+                nid = node.get("id", "")
+                if nid and nid not in seen_node_ids[graph_key]:
+                    seen_node_ids[graph_key].add(nid)
+                    merged[graph_key]["nodes"].append(node)
+            for edge in graph.get("edges", []):
+                edge_key = f"{edge.get('source', '')}→{edge.get('target', '')}"
+                src, tgt = edge.get("source", ""), edge.get("target", "")
+                if (edge_key not in seen_edge_keys[graph_key]
+                        and src in seen_node_ids[graph_key]
+                        and tgt in seen_node_ids[graph_key]):
+                    seen_edge_keys[graph_key].add(edge_key)
+                    merged[graph_key]["edges"].append(edge)
+
+        # Merge KPIs
+        kpis = result.get("kpis")
+        if kpis and isinstance(kpis, list):
+            if merged["kpis"] is None:
+                merged["kpis"] = []
+            merged["kpis"].extend(kpis)
+
+    return merged
+
+
 def _build_merge_prompt(chunk_results: list[dict], instructions: str | None) -> str:
     """Build the prompt for merging multiple chunk analyses."""
     parts = [
@@ -320,11 +376,17 @@ def _build_merge_prompt(chunk_results: list[dict], instructions: str | None) -> 
     return "\n".join(parts)
 
 
+# Max total text to analyze — prevents runaway costs on huge files
+# 400K chars ≈ 100K tokens input, keeps total cost under ~$0.50 for Haiku
+MAX_TEXT_LENGTH = 400000
+
+
 async def analyze_content(text: str, tables: list[dict], instructions: str | None = None) -> tuple[AnalysisOutput, int]:
     """
     Analyze content with automatic chunking for large documents.
-    - Small docs (<=80K chars): single pass analysis
+    - Small docs (<=120K chars): single pass analysis
     - Large docs: chunk → analyze each → merge results
+    - Very large docs (>400K chars): truncated to save cost
     Returns (analysis_output, num_chunks_analyzed)
     """
     client = anthropic.AsyncAnthropic(
@@ -332,11 +394,20 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
         timeout=300.0,  # 5 min max per API call
     )
 
+    # Cap text length to prevent runaway API costs
+    original_length = len(text)
+    if len(text) > MAX_TEXT_LENGTH:
+        logger.warning(
+            f"Text too large ({len(text):,} chars), truncating to {MAX_TEXT_LENGTH:,} chars "
+            f"to control costs. {len(text) - MAX_TEXT_LENGTH:,} chars skipped."
+        )
+        text = text[:MAX_TEXT_LENGTH]
+
     # Split text into chunks
     chunks = _split_text_into_chunks(text)
     num_chunks = len(chunks)
 
-    logger.info(f"Document size: {len(text):,} chars → {num_chunks} chunk(s)")
+    logger.info(f"Document size: {original_length:,} chars → analyzed {len(text):,} chars → {num_chunks} chunk(s)")
 
     t_start = time.time()
 
@@ -368,24 +439,23 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
     chunk_results = list(chunk_results)
     logger.info(f"All {num_chunks} chunks analyzed in {time.time() - t_start:.1f}s — now merging")
 
-    # Merge all chunk results
-    # If too many chunks, merge in batches (parallel) to stay within context
-    while len(chunk_results) > 5:
-        logger.info(f"Hierarchical merge: {len(chunk_results)} partial results → batches of 5")
-        # Build merge tasks for batches that need merging
-        batches = [chunk_results[i:i + 5] for i in range(0, len(chunk_results), 5)]
-        async def _merge_batch(batch: list[dict]) -> dict:
-            if len(batch) == 1:
-                return batch[0]
-            merge_prompt = _build_merge_prompt(batch, instructions)
-            return await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
-        chunk_results = list(await asyncio.gather(*[_merge_batch(b) for b in batches]))
+    # Use LOCAL merge (free, no API call) for small chunk counts
+    # Only use expensive Claude merge for 6+ chunks where dedup matters more
+    if len(chunk_results) <= 5:
+        logger.info(f"Using local merge for {len(chunk_results)} chunks (saves API cost)")
+        data = _local_merge(chunk_results)
+        logger.info(f"Local merge done in {time.time() - t_start:.1f}s total")
+        return AnalysisOutput(**data), num_chunks
 
-    # Final merge
+    # For many chunks, merge locally first (free), then do ONE Claude polish pass
+    logger.info(f"Local merge of {len(chunk_results)} chunks, then Claude polish pass")
+    local_merged = _local_merge(chunk_results)
+
+    # Single Claude call to deduplicate and clean up the merged result
     t_merge = time.time()
-    merge_prompt = _build_merge_prompt(chunk_results, instructions)
-    data = await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=16384)
-    logger.info(f"Final merge done in {time.time() - t_merge:.1f}s — total: {time.time() - t_start:.1f}s")
+    merge_prompt = _build_merge_prompt([local_merged], instructions)
+    data = await _call_and_parse(client, MERGE_SYSTEM_PROMPT, merge_prompt, max_tokens=12000)
+    logger.info(f"Claude polish done in {time.time() - t_merge:.1f}s — total: {time.time() - t_start:.1f}s")
 
     return AnalysisOutput(**data), num_chunks
 
