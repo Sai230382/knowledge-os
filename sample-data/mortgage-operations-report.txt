@@ -1,0 +1,354 @@
+═══════════════════════════════════════════════════════════════════════
+                   PACIFIC COAST MORTGAGE GROUP
+              OPERATIONS & PERFORMANCE REVIEW — Q4 2025
+═══════════════════════════════════════════════════════════════════════
+
+EXECUTIVE SUMMARY
+─────────────────
+Pacific Coast Mortgage Group processed 4,287 loan applications in Q4 2025,
+representing $1.42B in total loan volume. Net funded volume was $1.18B across
+3,614 closed loans. The average loan size increased 8.3% to $326,500, driven
+primarily by jumbo and non-QM product growth. Our pull-through rate improved
+from 72% to 84.3% following the implementation of the automated pre-qualification
+engine developed by the technology team under CTO Raj Mehta.
+
+The company operates across 14 branch offices in California, Oregon, Washington,
+and Arizona. Our wholesale channel contributed 38% of total volume while retail
+represented 62%. The correspondent lending division, launched in Q3 under
+VP Sarah Chen, is still in pilot phase with $42M in volume.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 1: ORGANIZATIONAL STRUCTURE & KEY PERSONNEL
+────────────────────────────────────────────────────────────────────────
+
+CEO: Michael Torres — 22 years in mortgage banking, former SVP at Wells Fargo
+  Home Lending. Drives the strategic vision of "Technology-First Lending."
+
+COO: Patricia Huang — Manages day-to-day operations across all channels.
+  Directly oversees processing, underwriting, closing, and post-closing.
+  Key initiative: "Zero Touch Processing" aimed at automating 70% of
+  file touches by end of 2026.
+
+CTO: Raj Mehta — Built the proprietary LoanFlow platform that integrates
+  with Encompass LOS, DU/LP AUS engines, and third-party verification
+  services. His team of 12 engineers maintains the tech stack.
+
+Chief Compliance Officer: David Kim — Former CFPB examiner. Manages regulatory
+  compliance for TILA, RESPA, ECOA, HMDA, and state-specific requirements.
+  Recently implemented the Compliance Sentinel automated monitoring system.
+
+VP of Sales: Jennifer Walsh — Manages 86 loan officers across retail branches.
+  Implemented the "Speed to Lead" program reducing initial contact time
+  from 4.2 hours to 18 minutes.
+
+VP of Underwriting: Thomas Rodriguez — Manages a team of 24 underwriters.
+  Avg underwriter handles 8-10 files per day. Created the "Clear to Close
+  Express" program for low-risk files (LTV < 70%, FICO > 760, W-2 income).
+
+VP of Wholesale: Amanda Foster — Manages relationships with 340 broker
+  partners. Oversees broker approvals, comp plan management, and wholesale
+  pricing engine.
+
+VP of Correspondent: Sarah Chen — Recently hired from Pennymac. Building
+  out the correspondent division with a target of $500M annual volume
+  by 2027.
+
+Head of Secondary Marketing: James Park — Manages loan pricing, lock desk,
+  hedge strategy, and investor relationships. Key investors: Fannie Mae,
+  Freddie Mac, Ginnie Mae, JP Morgan, Wells Fargo, PennyMac.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 2: LOAN ORIGINATION PROCESS
+────────────────────────────────────────────────────────────────────────
+
+STEP 1 — LEAD CAPTURE & PRE-QUALIFICATION
+  Sources: Direct web (32%), Zillow/LendingTree leads (24%), Realtor
+  referrals (28%), Past client referrals (16%)
+
+  The LoanFlow CRM automatically scores incoming leads using a proprietary
+  algorithm that factors in credit tier estimates, property location, and
+  loan amount. High-priority leads are routed to senior LOs within 5 minutes.
+
+  Pre-qualification uses soft credit pull via CreditXpert and preliminary
+  AUS findings via Desktop Underwriter (DU).
+
+STEP 2 — APPLICATION & DISCLOSURE
+  Full 1003 application completed via LoanFlow borrower portal or in-person.
+  System auto-generates initial disclosures (LE, TILA, etc.) within
+  3 business days per TRID requirements.
+
+  TRIBAL KNOWLEDGE: Processor Maria Santos has discovered that if the LE is
+  regenerated after a program change within the first 3 days, it resets
+  the TRID clock. This is not documented anywhere but has been confirmed
+  by compliance. Multiple processors now rely on this workaround.
+
+STEP 3 — PROCESSING
+  Average processing time: 4.2 days (down from 6.8 days in Q3)
+  Processors order: appraisal, title, HOI, VOE, VOD, tax transcripts
+
+  Automated verification via The Work Number (Equifax) covers 61% of
+  employment verifications. Remaining 39% require manual VOE, adding
+  2-3 days to processing time.
+
+  EXCEPTION: Self-employed borrowers with S-Corp structures and officer
+  compensation below market rates trigger additional review. Underwriter
+  Lisa Chang developed an informal "reasonableness test" comparing officer
+  comp to industry benchmarks via BLS data — this isn't in the official
+  guidelines but catches 80% of income misrepresentation cases.
+
+STEP 4 — UNDERWRITING
+  Three-tier review system:
+    Tier 1 — AUS-approved, standard docs → Junior underwriter (auto-assign)
+    Tier 2 — AUS-approved with conditions → Senior underwriter
+    Tier 3 — Manual underwrite, non-QM, exceptions → VP review
+
+  Average underwriting decision time:
+    Tier 1: 1.2 days | Tier 2: 2.4 days | Tier 3: 4.7 days
+
+  TRIBAL KNOWLEDGE: For VA loans with multiple periods of service, the
+  underwriting team has learned that the VA Regional Loan Center in
+  Phoenix processes COE requests 2-3 days faster than other centers.
+  Thomas Rodriguez routes all complex VA eligibility cases through Phoenix
+  even when the borrower's state would normally route elsewhere.
+
+STEP 5 — CONDITIONAL APPROVAL & CLEARING CONDITIONS
+  Average conditions per file: 6.3 (Tier 1), 12.8 (Tier 2), 22.1 (Tier 3)
+  Average days to clear conditions: 5.4 days
+  Most common conditions: Updated paystubs (78%), Explanation letters (65%),
+  Gift letter documentation (34%), Source & season large deposits (31%)
+
+STEP 6 — CLEAR TO CLOSE & CLOSING
+  Closing department managed by Director Karen Wu. Team of 6 closers.
+  Average time from CTC to funding: 3.2 days
+  E-closing adoption rate: 42% (hybrid) and 8% (full RON)
+
+  EXCEPTION: California-specific notary requirements for deed of trust
+  with power of sale clause require wet signatures for the deed even in
+  hybrid e-closing states. Karen Wu's team has a workaround: they schedule
+  a mobile notary for just the deed while everything else is e-signed.
+  This saves 1-2 days vs. full wet closing.
+
+STEP 7 — POST-CLOSING & SECONDARY MARKETING
+  Loans packaged for sale within 15 days of funding. James Park's team
+  manages a $280M pipeline hedge using TBA forward sales and options.
+
+  Investor suspense rate: 4.2% (industry avg: 8.1%)
+  Top suspense reasons: Missing HMDA data (28%), Title policy delays (24%),
+  Trailing documents (19%), Appraisal reconsideration of value (14%)
+
+────────────────────────────────────────────────────────────────────────
+SECTION 3: TECHNOLOGY ECOSYSTEM
+────────────────────────────────────────────────────────────────────────
+
+PRIMARY SYSTEMS:
+  ┌─────────────────────────────────────────────────────┐
+  │ Encompass LOS (ICE Mortgage Technology)             │
+  │   → Core loan origination, fee management, docs     │
+  │   → 3,800 active users                              │
+  │   → Version 24.3 (upgraded Q3 2025)                 │
+  ├─────────────────────────────────────────────────────┤
+  │ LoanFlow (Proprietary)                              │
+  │   → CRM, borrower portal, LO dashboard             │
+  │   → Built on: React, Node.js, PostgreSQL, AWS      │
+  │   → Integrates with Encompass via SDK               │
+  ├─────────────────────────────────────────────────────┤
+  │ Desktop Underwriter (Fannie Mae)                    │
+  │   → Primary AUS for conventional loans              │
+  │   → 89% of conv. loans get DU Approve/Eligible     │
+  ├─────────────────────────────────────────────────────┤
+  │ Loan Product Advisor (Freddie Mac)                  │
+  │   → Secondary AUS, used for comparison runs         │
+  │   → Also used for Freddie-specific products (HFA)   │
+  ├─────────────────────────────────────────────────────┤
+  │ Optimal Blue (pricing engine)                       │
+  │   → Real-time pricing across 18 investors           │
+  │   → Lock management and hedge integration           │
+  ├─────────────────────────────────────────────────────┤
+  │ Compliance Sentinel (Proprietary)                   │
+  │   → TRID timer tracking                             │
+  │   → Reg B adverse action monitoring                 │
+  │   → Fair lending analysis (HMDA + proprietary)      │
+  │   → Developed by David Kim's team with Raj Mehta    │
+  ├─────────────────────────────────────────────────────┤
+  │ DocuSign / Notarize                                 │
+  │   → E-signing for disclosures and closing           │
+  │   → RON (Remote Online Notarization) for 12 states  │
+  └─────────────────────────────────────────────────────┘
+
+INTEGRATION CHALLENGES:
+  - Encompass API rate limits cause batch processing failures during
+    peak hours (10am-2pm PT). Raj's team implemented a queue system
+    but it adds 15-30 minute delays.
+  - The Work Number (Equifax) frequently has stale employment data
+    for gig economy / 1099 workers, leading to manual fallback.
+  - Optimal Blue pricing discrepancies with investor rate sheets
+    occur ~3% of the time, requiring manual lock desk intervention.
+    James Park's team has built a reconciliation script that catches
+    most of these before loan lock.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 4: KEY PERFORMANCE INDICATORS — Q4 2025
+────────────────────────────────────────────────────────────────────────
+
+┌──────────────────────────────────────────┬───────────┬──────────┬────────┐
+│ Metric                                   │ Q4 2025   │ Q3 2025  │ Trend  │
+├──────────────────────────────────────────┼───────────┼──────────┼────────┤
+│ Total Applications                       │ 4,287     │ 3,940    │ ↑ 8.8% │
+│ Total Funded Loans                       │ 3,614     │ 3,198    │ ↑ 13%  │
+│ Total Funded Volume                      │ $1.18B    │ $1.02B   │ ↑ 15.7%│
+│ Average Loan Size                        │ $326,500  │ $319,000 │ ↑ 2.3% │
+│ Pull-Through Rate                        │ 84.3%     │ 72.0%    │ ↑ 12.3 │
+│ Average Days to Close (Purchase)         │ 28.4      │ 34.2     │ ↓ 17%  │
+│ Average Days to Close (Refinance)        │ 22.1      │ 26.8     │ ↓ 17.5%│
+│ First Payment Default Rate               │ 0.12%     │ 0.18%   │ ↓ 33%  │
+│ Investor Suspense Rate                   │ 4.2%      │ 5.8%    │ ↓ 27.6%│
+│ Customer Satisfaction (NPS)              │ 72        │ 68      │ ↑ 5.9% │
+│ Loan Officer Productivity (units/mo)     │ 4.8       │ 4.1     │ ↑ 17%  │
+│ Cost per Loan (fully loaded)             │ $8,240    │ $9,180  │ ↓ 10.2%│
+│ Gross Revenue per Loan                   │ $14,820   │ $13,950 │ ↑ 6.2% │
+│ Margin per Loan                          │ $6,580    │ $4,770  │ ↑ 37.9%│
+│ Compliance Exceptions                    │ 14        │ 23      │ ↓ 39.1%│
+│ Appraisal Waiver Rate                    │ 28%       │ 22%     │ ↑ 27.3%│
+│ E-Closing Adoption Rate                  │ 50%       │ 38%     │ ↑ 31.6%│
+│ Wholesale Channel Contribution           │ 38%       │ 35%     │ ↑ 8.6% │
+│ Average Conditions per File              │ 9.4       │ 11.2    │ ↓ 16.1%│
+│ Underwriter Capacity Utilization         │ 87%       │ 94%     │ ↓ 7.4% │
+└──────────────────────────────────────────┴───────────┴──────────┴────────┘
+
+CHANNEL BREAKDOWN:
+  Retail:        2,661 loans | $872M funded | 62% of volume
+  Wholesale:     911 loans  | $276M funded | 38% of volume
+  Correspondent: 42 loans   | $32M funded  | (pilot phase)
+
+PRODUCT MIX:
+  Conventional (Conf):  58% | Avg FICO: 742 | Avg LTV: 74%
+  FHA:                  18% | Avg FICO: 668 | Avg LTV: 93%
+  VA:                   14% | Avg FICO: 712 | Avg LTV: 97%
+  Jumbo:                 7% | Avg FICO: 778 | Avg LTV: 62%
+  Non-QM:                3% | Avg FICO: 694 | Avg LTV: 71%
+
+────────────────────────────────────────────────────────────────────────
+SECTION 5: COMPLIANCE & REGULATORY LANDSCAPE
+────────────────────────────────────────────────────────────────────────
+
+CURRENT REGULATORY FOCUS AREAS:
+
+1. TRID (TILA-RESPA Integrated Disclosure)
+   David Kim's team audits 15% of all files for TRID compliance.
+   Q4 violation rate: 1.8% (down from 3.2% in Q3)
+   Most common violations: Changed circumstance documentation (44%),
+   Fee tolerance cures (31%), Timing of revised LE (25%)
+
+   TRIBAL KNOWLEDGE: Compliance analyst Rachel Torres discovered that
+   Encompass auto-calculates tolerance cures incorrectly when there are
+   multiple changed circumstances on the same fee line item. She created
+   a manual spreadsheet tracker that the compliance team uses to verify
+   all tolerance cure calculations. This has prevented 12 potential
+   regulatory violations in Q4.
+
+2. ECOA / Fair Lending
+   HMDA data analyzed quarterly for potential disparities.
+   AI-assisted fair lending analysis implemented via Compliance Sentinel.
+   No material findings in Q4. However, denial rate disparity between
+   Hispanic and non-Hispanic white applicants in the Sacramento MSA
+   requires monitoring (8.2 percentage point gap, partially explained
+   by credit score distribution but 2.1 points remain unexplained).
+
+3. State-Specific Licensing
+   Operating in 4 states with varying requirements:
+   - California (DRE & DFPI dual licensing)
+   - Oregon (DCBS licensing, unique fee disclosure rules)
+   - Washington (DFI licensing, cooling-off period requirements)
+   - Arizona (DIFI licensing, standard requirements)
+
+   EXCEPTION: Oregon's unique "Total Loan Cost" disclosure must be
+   provided in addition to the federal LE. The LoanFlow system generates
+   this automatically, but when loans transfer between branches across
+   state lines, the Oregon disclosure sometimes doesn't generate.
+   Patricia Huang implemented a manual checklist for inter-branch
+   transfers but it's still missed about 5% of the time.
+
+4. Flood Insurance Compliance
+   FEMA map changes in Q4 affected 127 properties in our pipeline.
+   23 loans required flood insurance that wasn't initially anticipated.
+   The appraisal team now checks FEMA flood zone status at ordering
+   (not just at closing) — a process change implemented after two loans
+   had to be delayed 2 weeks for emergency flood insurance procurement.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 6: RISK MANAGEMENT & QUALITY CONTROL
+────────────────────────────────────────────────────────────────────────
+
+PRE-FUNDING QC:
+  - 100% of government loans reviewed pre-funding
+  - 20% random sample of conventional loans
+  - All non-QM and jumbo loans reviewed by senior underwriter
+  - Defect rate: 2.8% (industry benchmark: 3.5-5%)
+
+POST-CLOSING QC:
+  - 10% random sample across all channels
+  - Performed by third-party QC firm (Aces Quality Management)
+  - Critical defect rate: 0.4% (industry benchmark: 1.2%)
+  - Most common findings: Missing signatures on non-critical docs (38%),
+    Income calculation rounding differences (22%), Missing HOA cert (18%)
+
+FRAUD DETECTION:
+  - LoanGuard AI fraud detection integrated with Encompass
+  - Flagged 89 files in Q4 for potential issues
+  - 12 confirmed fraud attempts intercepted (occupancy fraud: 7,
+    income fraud: 3, identity fraud: 2)
+  - Estimated loss prevention: $3.2M
+
+REPURCHASE RISK:
+  - Total outstanding repurchase requests: 8 loans ($2.8M UPB)
+  - Successfully defended 5 requests via Aces audit trails
+  - Settled 2 requests at 40% of original loss claim
+  - 1 pending review
+
+────────────────────────────────────────────────────────────────────────
+SECTION 7: MARKET OUTLOOK & STRATEGIC INITIATIVES
+────────────────────────────────────────────────────────────────────────
+
+MARKET CONDITIONS:
+  30-year fixed rate: 6.78% (Q4 avg) — up from 6.45% in Q3
+  Purchase market: Strong, driven by inventory normalization in West Coast
+  Refinance market: Limited (est. 12% of total volume)
+  Housing inventory: 3.2 months supply (up from 2.4 months in Q3)
+
+  Key competitors: loanDepot, Guaranteed Rate, United Wholesale Mortgage
+  Competitive advantage: Speed (28-day close avg vs. industry 42 days),
+  technology, and local market expertise.
+
+STRATEGIC INITIATIVES FOR 2026:
+
+1. AI-Powered Underwriting Assistant ("UW Copilot")
+   Budget: $1.2M | Owner: Raj Mehta + Thomas Rodriguez
+   Goal: Reduce underwriting decision time by 50% using AI to
+   pre-review conditions and suggest stipulations.
+   Status: POC phase, testing on Tier 1 files
+   Risk: Regulatory uncertainty around AI in credit decisions
+
+2. Correspondent Channel Scale-Up
+   Budget: $2.5M | Owner: Sarah Chen
+   Goal: $500M annual volume by 2027
+   Hiring: 8 additional operations staff, 2 account executives
+   Key partnerships being negotiated: 3 community banks, 2 credit unions
+
+3. Hispanic Homeownership Initiative
+   Budget: $800K | Owner: Jennifer Walsh + David Kim
+   Goal: Address the denial rate gap in Sacramento MSA
+   Programs: Spanish-language pre-purchase counseling, alternative
+   credit documentation, community lending partnerships
+   Partnership: Local HUD-approved counseling agencies
+
+4. Post-Closing Automation ("Lights Out Post-Close")
+   Budget: $600K | Owner: Patricia Huang + Karen Wu
+   Goal: Automate 90% of post-closing activities including investor
+   delivery, document recording, and servicing boarding
+   Expected savings: $1,800 per loan in post-close costs
+
+5. Non-QM Product Expansion
+   Budget: $400K | Owner: Amanda Foster + James Park
+   Goal: Expand non-QM offerings (bank statement, DSCR, asset depletion)
+   Target: 8% of total volume by Q4 2026
+   Key investor partners: Angel Oak, Deephaven, A&D Mortgage

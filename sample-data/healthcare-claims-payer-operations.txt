@@ -1,0 +1,535 @@
+═══════════════════════════════════════════════════════════════════════
+                   MERIDIAN HEALTH PARTNERS
+          CLAIMS OPERATIONS & PERFORMANCE REVIEW — Q4 2025
+               (Regional Health Plan — Payer Side)
+═══════════════════════════════════════════════════════════════════════
+
+EXECUTIVE SUMMARY
+─────────────────
+Meridian Health Partners is a regional health plan serving 1.2 million
+members across Commercial (HMO/PPO), Medicare Advantage, and Medicaid
+managed care lines of business. In Q4 2025, the Claims Operations division
+processed 8.4 million claims totaling $3.8 billion in billed charges,
+adjudicating $2.1 billion in allowed amounts and paying $1.74 billion
+to providers.
+
+Our overall auto-adjudication rate reached 78.2% (up from 71.4% in Q3),
+driven by the ClaimsIQ rules engine upgrades led by VP of Claims Technology
+Priya Patel. The Medical Loss Ratio (MLR) for Commercial was 82.1%,
+Medicare Advantage was 86.4%, and Medicaid was 89.7% — all within target
+ranges. CEO Robert Marsh has set a 2026 goal of reaching 85% auto-adjudication
+while reducing the average cost per claim from $4.82 to $3.50.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 1: ORGANIZATIONAL STRUCTURE & KEY PERSONNEL
+────────────────────────────────────────────────────────────────────────
+
+CEO: Robert Marsh — 18 years in managed care. Former COO of Centene's
+  Western Region. Driving "Claims Excellence 2026" transformation.
+
+CMO: Dr. Anita Sharma — Board-certified internist. Oversees medical
+  policy, utilization management, prior authorization, and clinical
+  appeals. Manages team of 14 medical directors and 42 nurse reviewers.
+
+CFO: William Chen — Manages financial operations including claims
+  reserves, IBNR estimates, and actuarial coordination. Works closely
+  with claims ops on payment integrity.
+
+COO: Diane Fletcher — Oversees claims operations, provider relations,
+  member services, and enrollment. Manages 620 FTEs in claims ops.
+
+VP of Claims Operations: Marcus Johnson — 15 years in claims management.
+  Directly manages the claims processing, adjustments, and correspondence
+  teams. Oversees 480 claims examiners across three processing centers
+  (Phoenix AZ, Boise ID, San Antonio TX).
+
+VP of Claims Technology: Priya Patel — Built the ClaimsIQ intelligent
+  adjudication platform. Previously led engineering at Cotiviti.
+  Her team of 28 engineers maintains the claims tech stack.
+
+VP of Provider Relations: Angela Torres — Manages contracts with 12,400
+  in-network providers across 340 provider groups. Oversees credentialing,
+  fee schedule negotiations, and provider disputes.
+
+VP of Payment Integrity: Steven Park — Former SIU director at Anthem.
+  Manages pre-payment and post-payment review, COB recovery, subrogation,
+  and fraud/waste/abuse (FWA) detection.
+
+Director of Clinical Claims: Nurse Director Katherine Okoye — Manages
+  clinical review team that handles medical necessity determinations,
+  complex claims, and clinical appeals.
+
+Director of Government Programs: Lisa Ramirez — Manages Medicare Advantage
+  and Medicaid-specific claims rules, CMS compliance, and Star Ratings
+  quality measures tied to claims processing.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 2: CLAIMS ADJUDICATION PROCESS
+────────────────────────────────────────────────────────────────────────
+
+STEP 1 — CLAIMS INTAKE & FRONT-END PROCESSING
+  Intake channels:
+    EDI (837P/837I): 82% of total volume
+    Clearinghouses: Availity (45%), Change Healthcare (30%), Trizetto (7%)
+    Paper claims (OCR scanned): 14%
+    Provider portal direct entry: 4%
+
+  Front-end edits reject approximately 6.8% of incoming claims for:
+    - Missing/invalid member ID (2.1%)
+    - Missing/invalid provider NPI (1.4%)
+    - Invalid CPT/HCPCS/ICD-10 codes (1.8%)
+    - Duplicate claim detection (1.5%)
+
+  Rejected claims are returned to providers with ANSI 277 status
+  notifications within 24 hours.
+
+STEP 2 — ELIGIBILITY & BENEFITS VERIFICATION
+  Real-time 270/271 eligibility transactions: 1.2M per month
+  Member eligibility match rate: 96.8% (auto-matched)
+  Remaining 3.2% require manual research by enrollment team
+
+  TRIBAL KNOWLEDGE: Claims examiner veteran Linda Park (22 years at Meridian)
+  has built an informal "retroactive eligibility" guide for Medicaid members
+  whose coverage activates retroactively. The standard system denies these
+  claims, but Linda knows which state-specific codes to override and has
+  trained her team leads informally. This affects approximately 800 claims
+  per month. If Linda retires, this knowledge could result in $2.4M in
+  annual incorrect denials and provider abrasion.
+
+  TRIBAL KNOWLEDGE: For Medicare Advantage dual-eligible members (Medicare +
+  Medicaid), the coordination of benefits between Medicare primary and
+  Medicaid secondary often creates incorrect member liability calculations.
+  Supervisor Tony Reeves developed an Excel-based "dual-eligible calculator"
+  that the Boise team uses to manually verify these claims. This tool
+  isn't integrated into ClaimsIQ. Tony estimates it prevents approximately
+  $180K in monthly overpayments.
+
+STEP 3 — PROVIDER VALIDATION & CONTRACT MATCHING
+  In-network vs Out-of-network determination:
+    - 89% of claims are from in-network providers
+    - 8% out-of-network (No Surprises Act protections apply)
+    - 3% out-of-area emergency (auto-pay at in-network rate)
+
+  Fee schedule application:
+    - Commercial PPO: Negotiated fee schedules per provider group
+    - Commercial HMO: Capitated for PCP, FFS for specialists
+    - Medicare Advantage: CMS Medicare fee schedule + supplemental
+    - Medicaid: State-published fee schedule with MCO adjustments
+
+  EXCEPTION: Provider group Northwest Medical Associates (142 providers,
+  $48M annual spend) has a unique "carve-out" arrangement for orthopedic
+  implant costs. The contract specifies that implant costs above $8,000
+  per case are paid at invoice cost + 10% instead of the standard DRG
+  rate. ClaimsIQ cannot handle this rule automatically — the implant
+  claims team manually prices approximately 45 claims per month.
+  Angela Torres has escalated this for system enhancement in Q1 2026.
+
+  EXCEPTION: Emergency department claims from out-of-network providers
+  must be processed under the No Surprises Act (NSA) Qualifying Payment
+  Amount (QPA) methodology. The QPA calculation requires median contracted
+  rates from our own data — but for rare specialties (pediatric neurosurgery,
+  burn care), we have fewer than 5 contracted providers, making the median
+  statistically unreliable. Steven Park's team uses CMS-provided reference
+  data as a supplement, but this creates provider disputes in ~15% of NSA
+  cases.
+
+STEP 4 — CLINICAL REVIEW & MEDICAL NECESSITY
+  Claims routed to clinical review:
+    - Inpatient admissions (100% reviewed for medical necessity)
+    - High-cost outpatient procedures > $5,000
+    - Claims flagged by ClaimsIQ clinical rules (e.g., experimental
+      procedure codes, off-label drug combinations)
+    - Prior authorization mismatches
+
+  Medical policy maintained by Dr. Sharma's team:
+    - 842 medical policies active
+    - Policy updates: 34 updated in Q4 (following MCG/InterQual updates)
+    - Average review turnaround: 2.8 days (target: 2 days)
+
+  TRIBAL KNOWLEDGE: Dr. Sharma's team has found that MCG criteria for
+  inpatient psychiatric admissions don't adequately capture the complexity
+  of co-occurring substance use disorder cases. The clinical team has
+  developed an informal "dual-diagnosis supplement" of 14 additional
+  criteria points that they apply alongside MCG. This has reduced
+  inappropriate denials by 23% for behavioral health cases. However,
+  it's not formalized as official medical policy, creating inconsistency
+  between reviewers.
+
+  Prior Authorization compliance:
+    - 94% of PA-required services had valid PA on file
+    - 4% had PA but with date/quantity mismatches
+    - 2% had no PA — reviewed on a case-by-case basis
+    - Retrospective PA approval rate: 68% (for emergency situations)
+
+STEP 5 — ADJUDICATION & PAYMENT
+  Auto-adjudication rate: 78.2% (Q4 2025)
+    Commercial: 82.4% | Medicare Advantage: 74.1% | Medicaid: 71.8%
+
+  Manual examiner touch reasons:
+    - COB / Third-party liability (24%)
+    - Complex clinical review (18%)
+    - Provider contract exceptions (16%)
+    - Member cost-share calculation errors (14%)
+    - Retroactive enrollment changes (12%)
+    - System edit overrides requiring human review (16%)
+
+  Payment cycles:
+    - Electronic (EFT/ACH): 88% of payments, avg 12 days from receipt
+    - Paper checks: 12%, avg 21 days from receipt
+    - Clean claim prompt payment: 97.4% paid within state-mandated
+      timeframes (30 days electronic, 45 days paper)
+
+STEP 6 — PROVIDER DISPUTES & APPEALS
+  Provider disputes received: 12,400 in Q4
+  Resolution rate within 30 days: 84%
+  Overturn rate: 22% (provider wins)
+
+  Top dispute reasons:
+    - Fee schedule / reimbursement rate (34%)
+    - Bundling / unbundling edits (22%)
+    - Medical necessity denials (18%)
+    - Timely filing denials (14%)
+    - Coordination of benefits (12%)
+
+  TRIBAL KNOWLEDGE: Provider Relations specialist Maria Gonzalez has
+  built relationships with key billing managers at our top 20 provider
+  groups. She has an informal "fast track" process where she calls the
+  billing manager directly before a dispute is formally filed, resolving
+  approximately 60% of potential disputes before they enter the formal
+  process. This saves an estimated $85K/quarter in dispute processing
+  costs but is entirely dependent on Maria's personal relationships.
+
+STEP 7 — MEMBER APPEALS & GRIEVANCES
+  Member appeals filed: 3,200 in Q4
+  Internal appeal overturn rate: 18%
+  External review referral rate: 4% of internal denials upheld
+  External review overturn rate: 12%
+
+  CMS Compliance (Medicare Advantage):
+    - Organization determination timeliness: 98.2% (target: 95%)
+    - Reconsideration timeliness: 96.8% (target: 95%)
+    - CTM (Complaint Tracking Module) cases: 142 (↓18% vs Q3)
+
+────────────────────────────────────────────────────────────────────────
+SECTION 3: TECHNOLOGY ECOSYSTEM
+────────────────────────────────────────────────────────────────────────
+
+PRIMARY SYSTEMS:
+  ┌─────────────────────────────────────────────────────────┐
+  │ TriZetto Facets (Core Claims Platform)                  │
+  │   → Claims adjudication, member/provider management     │
+  │   → 1,200 active users across 3 processing centers      │
+  │   → Version 6.3.1 (upgraded Q2 2025)                    │
+  ├─────────────────────────────────────────────────────────┤
+  │ ClaimsIQ (Proprietary Rules Engine)                     │
+  │   → 14,200 auto-adjudication rules                      │
+  │   → Built on: Python, Apache Spark, PostgreSQL, AWS     │
+  │   → Sits on top of Facets, intercepts before manual Q   │
+  │   → Developed by Priya Patel's team                     │
+  ├─────────────────────────────────────────────────────────┤
+  │ InterQual / MCG (Clinical Decision Support)             │
+  │   → Medical necessity criteria for UM/clinical review   │
+  │   → Integrated with Facets for nurse reviewer workflow  │
+  ├─────────────────────────────────────────────────────────┤
+  │ Cotiviti / Optum Payment Integrity                      │
+  │   → Pre-payment claim editing (CCI, MUE, NCCI)         │
+  │   → DRG validation for inpatient claims                 │
+  │   → Estimated savings: $42M annually                    │
+  ├─────────────────────────────────────────────────────────┤
+  │ Availity Essentials (Provider Portal)                   │
+  │   → Eligibility verification, claim status, PA requests │
+  │   → 8,400 registered provider users                     │
+  ├─────────────────────────────────────────────────────────┤
+  │ Cognizant TriZetto QNXT (Government Programs)          │
+  │   → Medicare Advantage-specific processing              │
+  │   → RAPS/EDPS encounter submission to CMS               │
+  │   → Risk adjustment data management                     │
+  ├─────────────────────────────────────────────────────────┤
+  │ Apixio (AI/ML Platform)                                 │
+  │   → NLP for medical record review                       │
+  │   → Risk adjustment coding accuracy                     │
+  │   → Used by Dr. Sharma's team for complex reviews       │
+  ├─────────────────────────────────────────────────────────┤
+  │ SAS Fraud Detection (FWA)                               │
+  │   → Pattern analysis for fraud/waste/abuse              │
+  │   → Integrated with NHCAA data sharing consortium       │
+  │   → Steven Park's SIU team primary tool                 │
+  └─────────────────────────────────────────────────────────┘
+
+INTEGRATION CHALLENGES:
+  - Facets-to-ClaimsIQ handoff creates a 4-second latency per claim
+    during peak hours (9am-1pm ET), causing batch processing delays
+    of up to 2 hours for the afternoon payment cycle.
+  - Provider directory sync between Facets and Availity portal has
+    a 48-hour lag, leading to member-facing provider search showing
+    stale network status (est. 200 member complaints/month).
+  - Encounter data submission to CMS via QNXT has a 3.2% rejection
+    rate due to data mapping issues between Facets and QNXT schemas.
+    Lisa Ramirez's team manually corrects these before resubmission,
+    consuming 120 staff-hours per month.
+  - Apixio NLP accuracy for behavioral health records is only 72%
+    (vs 91% for medical/surgical), requiring more manual review.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 4: KEY PERFORMANCE INDICATORS — Q4 2025
+────────────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────┬───────────┬──────────┬────────┐
+│ Metric                                      │ Q4 2025   │ Q3 2025  │ Trend  │
+├─────────────────────────────────────────────┼───────────┼──────────┼────────┤
+│ Total Claims Processed                      │ 8.4M      │ 7.8M    │ ↑ 7.7% │
+│ Total Billed Charges                        │ $3.8B     │ $3.5B   │ ↑ 8.6% │
+│ Total Allowed Amount                        │ $2.1B     │ $1.95B  │ ↑ 7.7% │
+│ Total Paid Amount                           │ $1.74B    │ $1.62B  │ ↑ 7.4% │
+│ Auto-Adjudication Rate                      │ 78.2%     │ 71.4%   │ ↑ 9.5% │
+│ Clean Claim Rate                            │ 93.2%     │ 91.8%   │ ↑ 1.5% │
+│ Average Days to Pay (Clean Claims)          │ 12.4      │ 14.8    │ ↓ 16.2%│
+│ Average Days to Pay (All Claims)            │ 18.6      │ 22.3    │ ↓ 16.6%│
+│ Prompt Payment Compliance                   │ 97.4%     │ 95.8%   │ ↑ 1.7% │
+│ First-Pass Resolution Rate                  │ 88.6%     │ 85.2%   │ ↑ 4.0% │
+│ Claim Denial Rate (Initial)                 │ 11.4%     │ 14.8%   │ ↓ 23%  │
+│ Provider Dispute Rate                       │ 1.48%     │ 1.82%   │ ↓ 18.7%│
+│ Provider Dispute Overturn Rate              │ 22%       │ 26%     │ ↓ 15.4%│
+│ Member Appeal Rate                          │ 0.38%     │ 0.44%   │ ↓ 13.6%│
+│ Cost Per Claim (Fully Loaded)               │ $4.82     │ $5.34   │ ↓ 9.7% │
+│ Claims Examiner Productivity (claims/day)   │ 72        │ 64      │ ↑ 12.5%│
+│ Medical Loss Ratio - Commercial             │ 82.1%     │ 83.4%   │ ↓ 1.6% │
+│ Medical Loss Ratio - Medicare Advantage     │ 86.4%     │ 87.2%   │ ↓ 0.9% │
+│ Medical Loss Ratio - Medicaid               │ 89.7%     │ 90.1%   │ ↓ 0.4% │
+│ Payment Integrity Savings                   │ $42M      │ $38M    │ ↑ 10.5%│
+│ FWA Recoveries                              │ $8.2M     │ $6.4M   │ ↑ 28.1%│
+│ Provider Satisfaction Score                 │ 7.4/10    │ 7.1/10  │ ↑ 4.2% │
+│ CMS Star Rating (Claims Processing)        │ 4.0       │ 3.5     │ ↑      │
+│ Encounter Submission Accuracy               │ 96.8%     │ 95.2%   │ ↑ 1.7% │
+│ Prior Auth Turnaround (Urgent)              │ 18 hrs    │ 24 hrs  │ ↓ 25%  │
+│ Prior Auth Turnaround (Standard)            │ 3.2 days  │ 4.1 days│ ↓ 22%  │
+└─────────────────────────────────────────────┴───────────┴──────────┴────────┘
+
+CLAIMS VOLUME BY LINE OF BUSINESS:
+  Commercial HMO:     2.1M claims | $680M paid   | 25% of volume
+  Commercial PPO:     2.8M claims | $520M paid   | 33% of volume
+  Medicare Advantage:  2.0M claims | $380M paid   | 24% of volume
+  Medicaid:           1.5M claims | $160M paid   | 18% of volume
+
+CLAIMS VOLUME BY SERVICE CATEGORY:
+  Professional (CMS-1500): 62% of claims | 34% of paid dollars
+  Institutional (UB-04):   28% of claims | 52% of paid dollars
+  Dental:                   6% of claims |  4% of paid dollars
+  Pharmacy (PBM pass-through): 4% of claims | 10% of paid dollars
+
+TOP 10 DENIAL REASON CODES:
+  1. CO-4   (Procedure code inconsistent with modifier)      - 14.2%
+  2. CO-16  (Missing/incomplete claim information)            - 12.8%
+  3. CO-197 (Precertification/authorization not obtained)     - 11.4%
+  4. CO-29  (Timely filing limit exceeded)                    - 10.6%
+  5. CO-50  (Non-covered service per plan)                    -  9.8%
+  6. OA-23  (Payment adjusted - COB)                          -  8.4%
+  7. CO-97  (Bundled/inclusive procedure)                      -  7.6%
+  8. CO-18  (Duplicate claim)                                 -  6.8%
+  9. PI-204 (Service not consistent with provider type)       -  5.2%
+  10. CO-96 (Non-covered charge per contract)                 -  4.8%
+
+────────────────────────────────────────────────────────────────────────
+SECTION 5: PAYMENT INTEGRITY & FRAUD/WASTE/ABUSE
+────────────────────────────────────────────────────────────────────────
+
+PRE-PAYMENT REVIEW:
+  Cotiviti payment integrity suite processes 100% of claims pre-payment:
+    - NCCI/CCI bundling edits: Saved $18.4M in Q4
+    - MUE (Medically Unlikely Edits): Saved $6.2M
+    - DRG validation: Saved $8.8M (inpatient)
+    - Clinical code editing: Saved $4.2M
+    - Modifier validation: Saved $2.8M
+    - Place of service edits: Saved $1.6M
+
+  TOTAL PRE-PAYMENT SAVINGS: $42M in Q4
+
+POST-PAYMENT REVIEW:
+  Steven Park's team conducts targeted post-payment audits:
+    - Data mining identified 342 providers for targeted review
+    - Completed reviews on 128 providers
+    - Overpayment recovery: $4.8M
+    - Provider education letters sent: 89
+    - Cases referred to SIU for investigation: 12
+
+COORDINATION OF BENEFITS (COB):
+  - Active COB records: 184,000 members (15.3% of total)
+  - COB savings (other carrier primary): $28.4M in Q4
+  - Subrogation recoveries (accident/workers' comp): $3.8M
+  - COB data accuracy: 88% (industry avg: 82%)
+
+  TRIBAL KNOWLEDGE: COB specialist Janet Kim has developed an informal
+  process for identifying "hidden COB" — members who have other coverage
+  but didn't report it. She cross-references employer group size with
+  spouse employment data from eligibility files and runs quarterly
+  matches against other carriers via the CAQH COB Smart program. Her
+  process identifies approximately $1.2M in monthly COB savings that
+  the standard system misses. This process is not documented.
+
+FRAUD, WASTE & ABUSE (FWA):
+  SAS-based detection flagged 2,847 providers for potential FWA:
+    - Confirmed waste/overutilization: 186 providers
+    - Confirmed fraud referrals to law enforcement: 8
+    - Provider terminations for cause: 3
+    - Estimated FWA impact prevented: $8.2M
+
+  EXCEPTION: Telehealth claims for behavioral health counseling have
+  a unique FWA pattern — some providers bill 53+ minute sessions
+  (CPT 90837) at rates exceeding 95% of all encounters. National
+  benchmarks suggest this code should represent <40% of encounters.
+  Steven Park's team flagged 14 telehealth providers but faces challenges
+  because telehealth auditing standards are still evolving and providers
+  argue that longer sessions are clinically appropriate for virtual care.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 6: REGULATORY COMPLIANCE
+────────────────────────────────────────────────────────────────────────
+
+1. CMS COMPLIANCE (Medicare Advantage)
+   Medicare Advantage program under Lisa Ramirez serves 240,000 members
+   across 3 MA plans (HMO, PPO, SNP for dual-eligibles).
+
+   Star Ratings Impact on Claims:
+     - Part C Claims Processing timeliness: 4.0 stars (up from 3.5)
+     - Organization determination timeliness: 98.2%
+     - Appeals auto-forward timeliness: 99.1%
+     - CTM complaints related to claims: 142 (18% decrease)
+
+   Risk Adjustment:
+     - HCC coding accuracy rate: 94.2%
+     - RAF score documentation rate: 91.8%
+     - Encounter data submission accuracy: 96.8%
+     - RADV audit preparedness: Annual mock audit completed Q3,
+       3 findings remediated
+
+   EXCEPTION: CMS's new Interoperability and Prior Authorization Rule
+   (CMS-0057) requires implementation of FHIR-based APIs for prior auth
+   by January 2027. Priya Patel's team has started building the FHIR
+   interface but discovered that 34% of our medical policies cannot be
+   expressed as computable rules in the required FHIR format. Dr. Sharma
+   and Priya are co-leading a workgroup to address this gap.
+
+2. STATE REGULATORY COMPLIANCE
+   Operating in 6 states with varying prompt pay and claims rules:
+     - Arizona: 30-day clean claim, no interest required under 30 days
+     - Idaho: 30-day clean claim, 10% annual interest after
+     - Nevada: 30-day clean claim, provider can charge 1%/month
+     - Oregon: 30-day clean claim, stricter definition of "clean"
+     - Utah: 45-day clean claim, most lenient
+     - Washington: 30-day clean claim, includes dental in prompt pay
+
+   Multi-state compliance managed by 4 regulatory compliance analysts.
+
+3. HIPAA COMPLIANCE
+   - 0 reportable breaches in Q4
+   - 12 potential incidents investigated, all contained
+   - PHI access audit: 99.7% of access was appropriate
+   - Annual HIPAA training completion: 98.4%
+
+4. NO SURPRISES ACT (NSA) COMPLIANCE
+   - 3,400 NSA-applicable claims processed in Q4
+   - QPA calculations validated by external actuarial firm
+   - IDR (Independent Dispute Resolution) cases: 48 filed against us
+   - IDR outcomes: Won 31, Lost 14, Pending 3
+   - Average QPA offered: $842 vs average provider billed: $2,140
+
+────────────────────────────────────────────────────────────────────────
+SECTION 7: STRATEGIC INITIATIVES FOR 2026
+────────────────────────────────────────────────────────────────────────
+
+1. AI-POWERED CLAIMS EXAMINER ("ClaimsIQ 2.0")
+   Budget: $3.2M | Owners: Priya Patel + Marcus Johnson
+   Goal: Increase auto-adjudication from 78% to 88% using ML models
+   that learn from examiner decisions on complex claims.
+   - Phase 1 (Q1): Train models on 2 years of examiner override data
+   - Phase 2 (Q2): Deploy for COB claims (highest manual touch rate)
+   - Phase 3 (Q3): Expand to clinical review routing optimization
+   Risk: Model bias could create disparate claim outcomes by geography
+   or provider type. Dr. Sharma's team will audit for bias quarterly.
+
+2. PROVIDER COLLABORATION PORTAL
+   Budget: $1.8M | Owner: Angela Torres + Priya Patel
+   Goal: Reduce provider disputes by 40% through real-time claim
+   adjudication transparency.
+   - Real-time claim status with line-item detail
+   - Fee schedule look-up for contracted providers
+   - Pre-submission claim validation (check rules before billing)
+   - Automated reconsideration workflow
+   Expected savings: $2.4M/year in dispute processing costs
+
+3. VALUE-BASED PAYMENT TRANSFORMATION
+   Budget: $2.5M | Owners: Dr. Anita Sharma + Angela Torres
+   Goal: Move 40% of commercial contracts to value-based arrangements
+   by 2027 (currently 18%).
+   - Episode-based bundled payments for orthopedic and cardiac
+   - Shared savings for primary care ACOs
+   - Quality bonus integration with claims data
+   Challenge: Claims system (Facets) was designed for FFS — significant
+   customization needed for VBP adjudication. Priya Patel estimates
+   4,200 engineering hours to build VBP module.
+
+4. BEHAVIORAL HEALTH PARITY COMPLIANCE
+   Budget: $800K | Owners: Dr. Sharma + David Okonkwo (Legal)
+   Goal: Achieve full MHPAEA (Mental Health Parity) compliance
+   ahead of 2026 enforcement deadline.
+   - NQTLs (Non-Quantitative Treatment Limitations) audit underway
+   - Prior auth requirements for behavioral health being reviewed
+   - Network adequacy for behavioral health providers: Currently
+     42% below target in rural markets
+   Risk: DOL enforcement actions against plans have increased 300%
+   since 2023. Non-compliance could result in fines up to $100/day
+   per affected member.
+
+5. PHARMACY BENEFIT INTEGRATION
+   Budget: $1.5M | Owners: William Chen + Marcus Johnson
+   Goal: Bring pharmacy claims processing in-house (currently
+   outsourced to CVS Caremark PBM).
+   - Annual PBM spend: $420M (10% of total medical spend)
+   - Estimated savings from internalization: $18-24M annually
+   - Requires building pharmacy claims adjudication capability
+   - Timeline: 18 months (operational by Q3 2027)
+   Risk: Pharmacy is highly specialized — need to hire 4 clinical
+   pharmacists and build formulary management system.
+
+────────────────────────────────────────────────────────────────────────
+SECTION 8: PROVIDER NETWORK & CONTRACTING
+────────────────────────────────────────────────────────────────────────
+
+NETWORK OVERVIEW:
+  Total contracted providers: 12,400
+  Provider groups: 340
+  Hospitals: 48 (including 6 major health systems)
+  Behavioral health providers: 1,800
+  Dental providers: 2,200
+
+TOP PROVIDER GROUPS BY SPEND:
+  1. Pacific Health System (6 hospitals)      — $320M/year
+  2. Mountain West Medical Group (280 provs)  — $142M/year
+  3. Northwest Medical Associates (142 provs) — $48M/year
+  4. Valley Behavioral Health (89 provs)      — $38M/year
+  5. Desert Orthopedic Institute (34 provs)   — $28M/year
+
+CONTRACT RENEWAL CYCLE:
+  - 68% of contracts on calendar year cycle (Jan-Dec)
+  - 22% on fiscal year (Jul-Jun)
+  - 10% multi-year agreements
+  - Average rate increase negotiated in Q4: 4.2%
+  - 3 provider groups threatened network departure (resolved)
+
+NETWORK ADEQUACY:
+  Meeting CMS standards: 94% of service categories
+  Gaps identified:
+    - Pediatric psychiatry (rural markets): 42% below target
+    - Endocrinology (Boise market): 18% below target
+    - OB/GYN (Southern Arizona): 12% below target
+  Remediation: Telehealth partnerships + single-case agreements
+
+  TRIBAL KNOWLEDGE: Angela Torres has learned through 8 years of
+  negotiations that Pacific Health System's CFO, Dr. Martin Webb,
+  responds best to "total value of partnership" framing rather than
+  per-unit rate discussions. She always leads negotiations with quality
+  metrics and member satisfaction data before discussing rates. This
+  relationship management approach has kept Pacific Health rate increases
+  to 3.8% vs. the market average of 5.2%, saving Meridian approximately
+  $4.5M annually. If Angela leaves, we risk losing this negotiation
+  advantage with our largest provider partner.

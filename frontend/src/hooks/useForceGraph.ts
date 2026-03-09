@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { GraphData, GraphNode, GraphEdge } from "@/lib/types";
-import { NODE_COLORS } from "@/lib/constants";
+import { getNodeColor } from "@/lib/constants";
 
 interface ForceConfig {
   forces: {
@@ -325,7 +325,7 @@ export function useForceGraph(
     nodeGs
       .append("circle")
       .attr("r", 14)
-      .attr("fill", (d) => NODE_COLORS[d.type] || "#94A3B8")
+      .attr("fill", (d) => getNodeColor(d.type))
       .attr("stroke", nodeStrokeColor)
       .attr("stroke-width", 2.5)
       .attr("filter", "drop-shadow(0 1px 3px rgba(0,0,0,0.2))");
@@ -356,14 +356,25 @@ export function useForceGraph(
     nodeGs
       .append("text")
       .text((d) => {
+        // Show first 1-2 chars of the type as the icon letter
         const typeMap: Record<string, string> = {
           person: "P",
           process: "Pr",
           technology: "T",
           concept: "C",
           organization: "O",
+          regulation: "R",
+          location: "L",
+          department: "D",
+          event: "E",
+          metric: "M",
+          financial_instrument: "F",
+          document: "Dc",
+          role: "Rl",
+          service: "S",
+          product: "Pd",
         };
-        return typeMap[d.type] || "?";
+        return typeMap[d.type] || d.type.charAt(0).toUpperCase();
       })
       .attr("text-anchor", "middle")
       .attr("dy", 4)

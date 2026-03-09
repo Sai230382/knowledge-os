@@ -5,7 +5,7 @@ import GraphLegend from "./GraphLegend";
 import GraphControls from "./GraphControls";
 import NodeDetailPanel from "./NodeDetailPanel";
 import { GraphData, GraphNode, GraphEdge, AnalysisOutput } from "@/lib/types";
-import { CONTEXT_GRAPH_CONFIG, NODE_COLORS, NODE_LABELS } from "@/lib/constants";
+import { CONTEXT_GRAPH_CONFIG, getNodeColor, getNodeLabel } from "@/lib/constants";
 
 type HopLevel = "all" | 1 | 2;
 
@@ -145,10 +145,10 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
           <div key={type} className="flex items-center gap-1.5">
             <div
               className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: NODE_COLORS[type] || "#94A3B8" }}
+              style={{ backgroundColor: getNodeColor(type) }}
             />
             <span className="text-xs text-slate-600 dark:text-slate-400">
-              {NODE_LABELS[type] || type}: <span className="font-semibold">{count}</span>
+              {getNodeLabel(type)}: <span className="font-semibold">{count}</span>
             </span>
           </div>
         ))}
@@ -202,7 +202,7 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
             background: `linear-gradient(135deg, var(--graph-bg-from), var(--graph-bg-to))`,
           }}
         />
-        <GraphLegend />
+        <GraphLegend activeTypes={Object.keys(typeCounts)} />
         {!selectedNode && hopLevel === "all" && (
           <div className="absolute top-3 left-3 backdrop-blur border rounded-lg px-3 py-1.5 text-xs" style={{ backgroundColor: 'var(--graph-hint-bg)', borderColor: 'var(--graph-hint-border)', color: 'var(--graph-hint-text)' }}>
             Click a node to inspect details

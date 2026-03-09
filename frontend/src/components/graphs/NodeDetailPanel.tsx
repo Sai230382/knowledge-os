@@ -1,6 +1,6 @@
 "use client";
 import { GraphNode, GraphEdge, TribalKnowledge, ExceptionItem, AnalysisOutput } from "@/lib/types";
-import { NODE_COLORS, NODE_LABELS } from "@/lib/constants";
+import { getNodeColor, getNodeLabel } from "@/lib/constants";
 
 interface NodeDetailPanelProps {
   node: GraphNode;
@@ -43,11 +43,12 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
     (ex) => ex.related_entities && ex.related_entities.includes(node.id)
   );
 
-  const RISK_COLORS = {
+  const RISK_COLORS: Record<string, string> = {
     high: "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950",
     medium: "text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950",
     low: "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
   };
+  const DEFAULT_RISK_COLOR = "text-slate-600 bg-slate-50 dark:text-slate-400 dark:bg-slate-800";
 
   return (
     <div className="w-full h-full border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-y-auto shadow-2xl">
@@ -57,11 +58,11 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
           <div className="flex items-center gap-2.5">
             <div
               className="w-4 h-4 rounded-full flex-shrink-0 border-2 border-white dark:border-slate-800 shadow"
-              style={{ backgroundColor: NODE_COLORS[node.type] || "#94A3B8" }}
+              style={{ backgroundColor: getNodeColor(node.type) }}
             />
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-tight">{node.label}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{NODE_LABELS[node.type] || node.type}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{getNodeLabel(node.type)}</p>
             </div>
           </div>
           <button
@@ -95,7 +96,7 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
                 <div key={i} className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
                   <div
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
-                    style={{ backgroundColor: conn.node ? NODE_COLORS[conn.node.type] || "#94A3B8" : "#94A3B8" }}
+                    style={{ backgroundColor: conn.node ? getNodeColor(conn.node.type) : "#94A3B8" }}
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
@@ -136,7 +137,7 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
                   <p className="text-sm font-medium text-amber-900 dark:text-amber-200">{tk.title}</p>
                   <p className="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">{tk.description}</p>
                   <div className="flex items-center justify-between mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${RISK_COLORS[tk.risk_if_lost]}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${RISK_COLORS[tk.risk_if_lost] || DEFAULT_RISK_COLOR}`}>
                       Risk: {tk.risk_if_lost}
                     </span>
                   </div>
