@@ -86,13 +86,25 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
     return () => observer.disconnect();
   }, []);
 
+  // Sanitize: remove nodes with empty IDs and edges with invalid source/target
+  const sanitizedData = useMemo(() => {
+    const validNodes = data.nodes.filter((n) => n.id && n.label);
+    const nodeIds = new Set(validNodes.map((n) => n.id));
+    const validEdges = data.edges.filter((e) => {
+      const src = typeof e.source === "string" ? e.source : e.source?.id;
+      const tgt = typeof e.target === "string" ? e.target : e.target?.id;
+      return src && tgt && nodeIds.has(src) && nodeIds.has(tgt);
+    });
+    return { nodes: validNodes, edges: validEdges };
+  }, [data]);
+
   // Compute filtered graph data based on hop level and selected node
   const filteredData = useMemo(() => {
     if (hopLevel === "all" || !selectedNode) {
-      return data;
+      return sanitizedData;
     }
-    return getSubgraphByHops(data, selectedNode.id, hopLevel);
-  }, [data, selectedNode, hopLevel]);
+    return getSubgraphByHops(sanitizedData, selectedNode.id, hopLevel);
+  }, [sanitizedData, selectedNode, hopLevel]);
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};

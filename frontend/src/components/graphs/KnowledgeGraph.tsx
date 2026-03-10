@@ -31,10 +31,22 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     return () => observer.disconnect();
   }, []);
 
+  // Sanitize: remove nodes with empty IDs and edges with invalid source/target
+  const sanitizedData = useMemo(() => {
+    const validNodes = data.nodes.filter((n) => n.id && n.label);
+    const nodeIds = new Set(validNodes.map((n) => n.id));
+    const validEdges = data.edges.filter((e) => {
+      const src = typeof e.source === "string" ? e.source : e.source?.id;
+      const tgt = typeof e.target === "string" ? e.target : e.target?.id;
+      return src && tgt && nodeIds.has(src) && nodeIds.has(tgt);
+    });
+    return { nodes: validNodes, edges: validEdges };
+  }, [data]);
+
   // Build entity indicators map
   const entityIndicators = useMemo(() => {
     const map: Record<string, { hasTribal: boolean; hasException: boolean }> = {};
-    data.nodes.forEach((n) => {
+    sanitizedData.nodes.forEach((n) => {
       const hasTribal = analysis.tribal_knowledge.some(
         (tk) => tk.related_entities && tk.related_entities.includes(n.id)
       );
@@ -46,18 +58,18 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
       }
     });
     return map;
-  }, [data.nodes, analysis.tribal_knowledge, analysis.exceptions]);
+  }, [sanitizedData.nodes, analysis.tribal_knowledge, analysis.exceptions]);
 
   // Count by type
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    data.nodes.forEach((n) => {
+    sanitizedData.nodes.forEach((n) => {
       counts[n.type] = (counts[n.type] || 0) + 1;
     });
     return counts;
-  }, [data.nodes]);
+  }, [sanitizedData.nodes]);
 
-  useForceGraph(svgRef, data, dimensions, GRAPH_CONFIG, {
+  useForceGraph(svgRef, sanitizedData, dimensions, GRAPH_CONFIG, {
     onNodeClick: (node) => {
       // D3 sends null-ish when background is clicked
       if (node && node.id) {
@@ -69,7 +81,7 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     entityIndicators,
   });
 
-  if (data.nodes.length === 0) {
+  if (sanitizedData.nodes.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400 dark:text-slate-500">
         <p className="text-sm">No entities found for knowledge graph</p>
@@ -82,7 +94,7 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
       {/* Stats bar - entity counts by category */}
       <div className="flex items-center gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-t-lg flex-shrink-0">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-          {data.nodes.length} entities, {data.edges.length} relationships
+          {sanitizedData.nodes.length} entities, {sanitizedData.edges.length} relationships
         </span>
         <div className="h-3 border-l border-slate-300 dark:border-slate-600" />
         {Object.entries(typeCounts).map(([type, count]) => (
