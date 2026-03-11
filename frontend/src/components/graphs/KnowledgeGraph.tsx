@@ -43,22 +43,25 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     return { nodes: validNodes, edges: validEdges };
   }, [data]);
 
-  // Build entity indicators map
+  // Build entity indicators map from context_intelligence
   const entityIndicators = useMemo(() => {
     const map: Record<string, { hasTribal: boolean; hasException: boolean }> = {};
+    const intel = analysis.context_intelligence || [];
     sanitizedData.nodes.forEach((n) => {
-      const hasTribal = analysis.tribal_knowledge.some(
-        (tk) => tk.related_entities && tk.related_entities.includes(n.id)
+      const hasTribal = intel.some(
+        (ci) => ci.related_entities && ci.related_entities.includes(n.id) &&
+                (ci.intel_type === "tribal_knowledge" || ci.intel_type === "workaround" || ci.intel_type === "hidden_pattern")
       );
-      const hasException = analysis.exceptions.some(
-        (ex) => ex.related_entities && ex.related_entities.includes(n.id)
+      const hasException = intel.some(
+        (ci) => ci.related_entities && ci.related_entities.includes(n.id) &&
+                ci.intel_type === "exception"
       );
       if (hasTribal || hasException) {
         map[n.id] = { hasTribal, hasException };
       }
     });
     return map;
-  }, [sanitizedData.nodes, analysis.tribal_knowledge, analysis.exceptions]);
+  }, [sanitizedData.nodes, analysis.context_intelligence]);
 
   // Count by type
   const typeCounts = useMemo(() => {

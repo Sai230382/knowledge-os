@@ -10,29 +10,49 @@ from app.schemas.claude_schemas import AnalysisOutput
 
 logger = logging.getLogger(__name__)
 
-# Max chars per chunk sent to Claude (~120K chars ≈ 30K tokens, Haiku handles 200K context)
+# Max chars per chunk sent to Claude (~120K chars ≈ 30K tokens)
 # Larger chunks = fewer API calls = lower cost
 CHUNK_SIZE = 120000
 # Max tables per chunk
 TABLES_PER_CHUNK = 20
 
-SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. Analyze documents and extract knowledge across 8 dimensions.
+SYSTEM_PROMPT = """You are a Knowledge Extraction Specialist. Extract knowledge in 4 LAYERS — each layer builds on the previous.
 
 APPROACH:
 - Be DESCRIPTIVE: only report what you can directly support with evidence from the text.
 - Surface hidden connections that people working in silos would miss.
 - If a category has nothing genuine, return an empty list. Never fabricate.
+- Think in LAYERS: foundation first, then intelligence, then gaps, then action.
 
-Extract into these 8 sections:
+═══ LAYER 1: FOUNDATION — What formally exists ═══
 
-1. INDUSTRY PATTERNS: Market trends, industry dynamics, competitive forces. Max 5. Empty if none.
-2. PROCESS VARIATIONS: How different inputs/scenarios trigger different process paths (e.g., FHA vs conventional, self-employed vs W-2). Max 5. Empty if none.
-3. TRIBAL KNOWLEDGE: Undocumented know-how, informal rules, workarounds that only experienced people know. Max 5. Empty if none.
-4. EXCEPTIONS: Edge cases, anomalies, special handling that deviates from standard process. Max 5. Empty if none.
-5. GAP ANALYSIS: Missing documentation, ownership gaps, process gaps, technology gaps, single points of failure. Max 5. Empty if none.
-6. RECOMMENDATIONS: Actionable improvements — formalize tribal knowledge, automate exceptions, fix gaps. Max 5. Empty if none.
-7. KNOWLEDGE GRAPH: The FORMAL map — entities and their official, documented relationships. Max 20 nodes, 30 edges.
-8. CONTEXT GRAPH: The HIDDEN intelligence layer — how tribal knowledge, exceptions, and unseen patterns create informal dependencies between entities. Every edge should represent knowledge NOT in any manual. Max 15 nodes, 25 edges.
+1. KNOWLEDGE GRAPH: The FORMAL entity map — every important person/role, process, technology, and concept, with their official documented relationships. This is the backbone everything else connects to. Max 25 nodes, 35 edges.
+   - Edges = formal relationships: "uses", "manages", "requires", "feeds_into", "reports_to", "produces"
+   - Be SELECTIVE: only the most important entities, not everything mentioned
+
+2. INDUSTRY PATTERNS: External market trends, regulatory forces, industry dynamics that shape the organization. Max 5. Empty if none found in the text.
+
+═══ LAYER 2: INTELLIGENCE — What's hidden ═══
+
+3. CONTEXT INTELLIGENCE: ALL hidden knowledge in ONE unified list — tribal knowledge, exceptions, workarounds, process variations, hidden patterns. Each item has an intel_type. Max 10.
+   - tribal_knowledge: Undocumented know-how only experienced people know
+   - exception: Edge cases requiring special handling
+   - workaround: Unofficial fixes for known problems
+   - process_variation: Different inputs/scenarios triggering different paths
+   - hidden_pattern: Unseen trends or dependencies across silos
+
+4. CONTEXT GRAPH: The HIDDEN intelligence layer — uses the SAME nodes as the knowledge graph but adds edges representing undocumented dependencies. Every edge should represent knowledge NOT in any manual. Max 20 edges.
+   - CRITICAL: Context graph nodes MUST reuse the same node IDs from the knowledge graph. Do NOT create new nodes — reference existing ones.
+   - Each edge must have a context_type: tribal_knowledge|exception|hidden_pattern|workaround
+   - Edge labels should be SHORT (5-10 words max)
+
+═══ LAYER 3: GAPS — What's missing ═══
+
+5. GAP ANALYSIS: Where the organization falls short — missing documentation, ownership gaps, process gaps, technology gaps, single points of failure. Max 5. Reference specific knowledge graph entities.
+
+═══ LAYER 4: ACTION — What to do ═══
+
+6. RECOMMENDATIONS: Actionable improvements that address specific gaps and leverage context intelligence. Each recommendation should reference the gap or intelligence it addresses. Max 5.
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 - person: People, roles, teams, departments, organizations
@@ -41,19 +61,19 @@ ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 - concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 JSON Schema:
-{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"process_variations":[{"title":"str","description":"str","trigger":"str","impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"gap_analysis":[{"title":"str","description":"str","gap_type":"process_gap|knowledge_gap|technology_gap|ownership_gap","risk_level":"high|medium|low","recommendation":"str"}],"recommendations":[{"title":"str","description":"str","priority":"high|medium|low","effort":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","context_type":"tribal_knowledge|exception|hidden_pattern|workaround","strength":0.7}]}}
+{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"context_intelligence":[{"title":"str","description":"str","intel_type":"tribal_knowledge|exception|workaround|process_variation|hidden_pattern","trigger":"str","impact":"str","risk_level":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"gap_analysis":[{"title":"str","description":"str","gap_type":"process_gap|knowledge_gap|technology_gap|ownership_gap","risk_level":"high|medium|low","recommendation":"str"}],"recommendations":[{"title":"str","description":"str","priority":"high|medium|low","effort":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[],"edges":[{"source":"id","target":"id","label":"short label","context_type":"tribal_knowledge|exception|hidden_pattern|workaround","strength":0.7}]}}
 
-KNOWLEDGE GRAPH vs CONTEXT GRAPH — key distinction:
-- Knowledge Graph edges = FORMAL relationships ("uses", "manages", "requires", "feeds_into")
-- Context Graph edges = HIDDEN intelligence ("workaround: ...", "tribal: ...", "exception: ..."). Each edge must have a context_type.
-- Context Graph nodes should reference the SAME entity IDs as Knowledge Graph where applicable.
+IMPORTANT — CONTEXT GRAPH:
+- context_graph.nodes should be an EMPTY array (it reuses knowledge_graph nodes)
+- context_graph.edges reference node IDs from knowledge_graph
+- Edge labels must be SHORT (5-10 words). Full explanation goes in context_intelligence items.
 
 RULES:
 - Keep it focused: only the MOST important entities, not everything
 - Keep descriptions to 1-2 sentences
 - All entity IDs: unique lowercase slugs
-- All edges must reference valid node IDs
-- related_entities must reference knowledge_graph node IDs
+- All edges must reference valid node IDs from the knowledge graph
+- related_entities in context_intelligence must reference knowledge_graph node IDs
 - Every node needs a description
 - Respond ONLY with valid JSON, no markdown, no code blocks"""
 
@@ -63,21 +83,23 @@ MERGE_SYSTEM_PROMPT = """You are a Knowledge Synthesis Specialist. Merge multipl
 Your job:
 1. MERGE all sections — deduplicate similar items, combine evidence, keep the best version.
 2. MERGE knowledge graphs — deduplicate nodes by ID or similar names, merge edges.
-3. MERGE context graphs — same rules, preserve context_type on edges.
-4. Where multiple chunks found the same pattern/entity, INCREASE confidence and merge evidence.
-5. Create cross-chunk connections in both graphs.
-6. MERGE gap_analysis and recommendations — deduplicate, keep highest priority.
+3. MERGE context graphs — preserve context_type on edges, deduplicate.
+4. MERGE context_intelligence — deduplicate, preserve intel_type.
+5. Where multiple chunks found the same pattern/entity, INCREASE confidence and merge evidence.
+6. Create cross-chunk connections in both graphs.
+7. MERGE gap_analysis and recommendations — deduplicate, keep highest priority.
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 
-Respond with the SAME JSON schema as the individual analyses. Respond ONLY with valid JSON.
-
 IMPORTANT:
+- context_graph.nodes should be EMPTY (reuses knowledge_graph nodes)
+- context_graph.edges reference knowledge_graph node IDs, each with context_type
+- Context graph edge labels must be SHORT (5-10 words)
 - All entity IDs: unique lowercase slugs
 - Every edge must reference valid node IDs
-- Context graph edges must have context_type (tribal_knowledge|exception|hidden_pattern|workaround)
 - Deduplicate aggressively
-- Every node MUST have a description field"""
+- Every node MUST have a description field
+- Respond ONLY with valid JSON"""
 
 
 def _repair_json(text: str) -> str:
@@ -309,7 +331,8 @@ def _build_chunk_prompt(
         "\n\nRespond with the JSON structure defined in your instructions. "
         "Ensure all entity IDs in the knowledge graph are unique lowercase slugs. "
         "Ensure every edge references valid node IDs. "
-        "Ensure related_entities in tribal_knowledge and exceptions reference valid knowledge_graph node IDs."
+        "Ensure related_entities in context_intelligence reference valid knowledge_graph node IDs. "
+        "Context graph nodes should be empty — reuse knowledge_graph node IDs for context edges."
     )
     return "\n".join(parts)
 
@@ -320,9 +343,7 @@ def _local_merge(chunk_results: list[dict]) -> dict:
     """
     merged = {
         "industry_patterns": [],
-        "process_variations": [],
-        "tribal_knowledge": [],
-        "exceptions": [],
+        "context_intelligence": [],
         "gap_analysis": [],
         "recommendations": [],
         "knowledge_graph": {"nodes": [], "edges": []},
@@ -330,13 +351,14 @@ def _local_merge(chunk_results: list[dict]) -> dict:
     }
 
     seen_pattern_titles = set()
-    seen_node_ids = {"knowledge_graph": set(), "context_graph": set()}
-    seen_edge_keys = {"knowledge_graph": set(), "context_graph": set()}
+    seen_node_ids = set()
+    seen_kg_edge_keys = set()
+    seen_ctx_edge_keys = set()
 
     for result in chunk_results:
         # Merge all list sections (dedupe by title)
-        for key in ["industry_patterns", "process_variations", "tribal_knowledge",
-                     "exceptions", "gap_analysis", "recommendations"]:
+        for key in ["industry_patterns", "context_intelligence",
+                     "gap_analysis", "recommendations"]:
             for item in result.get(key, []):
                 title = item.get("title", "")
                 dedup_key = f"{key}:{title.lower().strip()}"
@@ -344,22 +366,36 @@ def _local_merge(chunk_results: list[dict]) -> dict:
                     seen_pattern_titles.add(dedup_key)
                     merged[key].append(item)
 
-        # Merge graphs (dedupe nodes by ID, edges by source+target)
-        for graph_key in ["knowledge_graph", "context_graph"]:
-            graph = result.get(graph_key, {})
-            for node in graph.get("nodes", []):
-                nid = node.get("id", "")
-                if nid and nid not in seen_node_ids[graph_key]:
-                    seen_node_ids[graph_key].add(nid)
-                    merged[graph_key]["nodes"].append(node)
-            for edge in graph.get("edges", []):
-                edge_key = f"{edge.get('source', '')}→{edge.get('target', '')}"
-                src, tgt = edge.get("source", ""), edge.get("target", "")
-                if (edge_key not in seen_edge_keys[graph_key]
-                        and src in seen_node_ids[graph_key]
-                        and tgt in seen_node_ids[graph_key]):
-                    seen_edge_keys[graph_key].add(edge_key)
-                    merged[graph_key]["edges"].append(edge)
+        # Merge knowledge graph nodes (the one true node set)
+        kg = result.get("knowledge_graph", {})
+        for node in kg.get("nodes", []):
+            nid = node.get("id", "")
+            if nid and nid not in seen_node_ids:
+                seen_node_ids.add(nid)
+                merged["knowledge_graph"]["nodes"].append(node)
+        for edge in kg.get("edges", []):
+            edge_key = f"{edge.get('source', '')}→{edge.get('target', '')}"
+            src, tgt = edge.get("source", ""), edge.get("target", "")
+            if (edge_key not in seen_kg_edge_keys
+                    and src in seen_node_ids and tgt in seen_node_ids):
+                seen_kg_edge_keys.add(edge_key)
+                merged["knowledge_graph"]["edges"].append(edge)
+
+        # Merge context graph edges (nodes come from knowledge graph)
+        ctx = result.get("context_graph", {})
+        # Also collect any context graph nodes into knowledge graph node set
+        for node in ctx.get("nodes", []):
+            nid = node.get("id", "")
+            if nid and nid not in seen_node_ids:
+                seen_node_ids.add(nid)
+                merged["knowledge_graph"]["nodes"].append(node)
+        for edge in ctx.get("edges", []):
+            edge_key = f"ctx:{edge.get('source', '')}→{edge.get('target', '')}"
+            src, tgt = edge.get("source", ""), edge.get("target", "")
+            if (edge_key not in seen_ctx_edge_keys
+                    and src in seen_node_ids and tgt in seen_node_ids):
+                seen_ctx_edge_keys.add(edge_key)
+                merged["context_graph"]["edges"].append(edge)
 
     return merged
 
@@ -382,7 +418,7 @@ def _build_merge_prompt(chunk_results: list[dict], instructions: str | None) -> 
     parts.append(
         "\n\n## Your Task:\n"
         "Merge ALL the above analyses into ONE unified result with the same JSON schema. "
-        "Deduplicate patterns, entities, and KPIs. Merge evidence lists. "
+        "Deduplicate patterns, entities, and intelligence items. Merge evidence lists. "
         "Create cross-section entity relationships where applicable. "
         "The final result should be comprehensive yet clean — no duplicates.\n"
         "Respond ONLY with valid JSON."
@@ -391,7 +427,7 @@ def _build_merge_prompt(chunk_results: list[dict], instructions: str | None) -> 
 
 
 # Max total text to analyze — prevents runaway costs on huge files
-# 400K chars ≈ 100K tokens input, keeps total cost under ~$0.50 for Haiku
+# 400K chars ≈ 100K tokens input
 MAX_TEXT_LENGTH = 400000
 
 
@@ -477,29 +513,27 @@ async def analyze_content(text: str, tables: list[dict], instructions: str | Non
 REFINE_SYSTEM_PROMPT = """You are a Knowledge Analysis Assistant. You have a current analysis and the user wants to refine, query, or expand it.
 
 Based on the user's request, produce an UPDATED version of the analysis JSON. You may:
-- Add/remove patterns, entities, gaps, or recommendations
+- Add/remove patterns, entities, gaps, intelligence items, or recommendations
 - Expand details on specific areas
 - Add new graph connections
-- Adjust confidence/priority levels
+- Adjust confidence/priority/risk levels
 - Answer questions by incorporating answers INTO the analysis
 
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
-- person: People, roles, teams, departments, organizations
-- process: Workflows, procedures, operations, business rules, pipelines
-- technology: Software, systems, tools, platforms, data sources, integrations
-- concept: Regulations, metrics, standards, strategies, risks, business concepts
 
 IMPORTANT RULES:
 - Return the COMPLETE updated analysis JSON (not just changes)
 - Keep existing items unless user explicitly asks to remove them
+- context_graph.nodes should be EMPTY (reuses knowledge_graph nodes)
+- context_graph.edges reference knowledge_graph node IDs, each with context_type
+- Context graph edge labels must be SHORT (5-10 words)
 - All entity IDs: unique lowercase slugs
 - Every edge must reference valid node IDs
-- Context graph edges must have context_type (tribal_knowledge|exception|hidden_pattern|workaround)
 - Every node MUST have a description field
 - Respond ONLY with valid JSON, no markdown
 
 JSON Schema:
-{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"process_variations":[{"title":"str","description":"str","trigger":"str","impact":"str"}],"tribal_knowledge":[{"title":"str","description":"str","risk_if_lost":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"exceptions":[{"title":"str","description":"str","trigger":"str","handling":"str","related_entities":["id"]}],"gap_analysis":[{"title":"str","description":"str","gap_type":"process_gap|knowledge_gap|technology_gap|ownership_gap","risk_level":"high|medium|low","recommendation":"str"}],"recommendations":[{"title":"str","description":"str","priority":"high|medium|low","effort":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","context_type":"tribal_knowledge|exception|hidden_pattern|workaround","strength":0.7}]}}"""
+{"industry_patterns":[{"title":"str","description":"str","confidence":"high|medium|low","evidence":["str"]}],"context_intelligence":[{"title":"str","description":"str","intel_type":"tribal_knowledge|exception|workaround|process_variation|hidden_pattern","trigger":"str","impact":"str","risk_level":"high|medium|low","formalization_action":"str","related_entities":["id"]}],"gap_analysis":[{"title":"str","description":"str","gap_type":"process_gap|knowledge_gap|technology_gap|ownership_gap","risk_level":"high|medium|low","recommendation":"str"}],"recommendations":[{"title":"str","description":"str","priority":"high|medium|low","effort":"str","related_entities":["id"]}],"knowledge_graph":{"nodes":[{"id":"slug","label":"Name","type":"person|process|technology|concept","description":"str"}],"edges":[{"source":"id","target":"id","label":"str","strength":0.8}]},"context_graph":{"nodes":[],"edges":[{"source":"id","target":"id","label":"short label","context_type":"tribal_knowledge|exception|hidden_pattern|workaround","strength":0.7}]}}"""
 
 
 async def refine_analysis(
@@ -532,7 +566,7 @@ ACCUMULATE_SYSTEM_PROMPT = """You are a Knowledge Accumulation Specialist. Merge
 
 Rules:
 - Keep ALL existing knowledge — never drop previous findings
-- Add all NEW patterns, entities, gaps, and recommendations
+- Add all NEW patterns, entities, intelligence items, gaps, and recommendations
 - Deduplicate — merge matching items, combine evidence, take higher confidence
 - Create CROSS-DOCUMENT connections in both knowledge and context graphs
 - The result should represent ACCUMULATED knowledge across all documents
@@ -540,9 +574,11 @@ Rules:
 ENTITY TYPES — use ONLY these 4: person, process, technology, concept
 
 IMPORTANT:
+- context_graph.nodes should be EMPTY (reuses knowledge_graph nodes)
+- context_graph.edges reference knowledge_graph node IDs, each with context_type
+- Context graph edge labels must be SHORT (5-10 words)
 - All entity IDs: unique lowercase slugs
 - Every edge must reference valid node IDs
-- Context graph edges must have context_type (tribal_knowledge|exception|hidden_pattern|workaround)
 - Every node MUST have a description field
 - Respond ONLY with valid JSON, no markdown"""
 

@@ -9,26 +9,15 @@ class IndustryPattern(BaseModel):
     evidence: list[str] = []
 
 
-class ProcessVariation(BaseModel):
+class ContextIntelligence(BaseModel):
+    """Unified hidden knowledge: tribal knowledge, exceptions, workarounds, process variations."""
     title: str = ""
     description: str = ""
+    intel_type: str = ""  # tribal_knowledge, exception, workaround, process_variation, hidden_pattern
     trigger: str = ""
     impact: str = ""
-
-
-class TribalKnowledge(BaseModel):
-    title: str = ""
-    description: str = ""
-    risk_if_lost: str = "medium"
+    risk_level: str = "medium"
     formalization_action: str = ""
-    related_entities: list[str] = []
-
-
-class ExceptionItem(BaseModel):
-    title: str = ""
-    description: str = ""
-    trigger: str = ""
-    handling: str = ""
     related_entities: list[str] = []
 
 
@@ -82,10 +71,8 @@ class ContextGraphData(BaseModel):
 
 class AnalysisOutput(BaseModel):
     industry_patterns: list[IndustryPattern] = []
-    process_variations: list[ProcessVariation] = []
-    tribal_knowledge: list[TribalKnowledge] = []
-    exceptions: list[ExceptionItem] = []
-    knowledge_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
-    context_graph: ContextGraphData = ContextGraphData(nodes=[], edges=[])
+    context_intelligence: list[ContextIntelligence] = []
     gap_analysis: list[GapAnalysis] = []
     recommendations: list[Recommendation] = []
+    knowledge_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
+    context_graph: ContextGraphData = ContextGraphData(nodes=[], edges=[])

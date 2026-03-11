@@ -5,26 +5,14 @@ export interface IndustryPattern {
   evidence: string[];
 }
 
-export interface ProcessVariation {
+export interface ContextIntelligence {
   title: string;
   description: string;
+  intel_type: string; // tribal_knowledge, exception, workaround, process_variation, hidden_pattern
   trigger: string;
   impact: string;
-}
-
-export interface TribalKnowledge {
-  title: string;
-  description: string;
-  risk_if_lost: "high" | "medium" | "low";
+  risk_level: "high" | "medium" | "low";
   formalization_action: string;
-  related_entities: string[];
-}
-
-export interface ExceptionItem {
-  title: string;
-  description: string;
-  trigger: string;
-  handling: string;
   related_entities: string[];
 }
 
@@ -77,9 +65,7 @@ export interface ContextGraphData extends GraphData {
 
 export interface AnalysisOutput {
   industry_patterns: IndustryPattern[];
-  process_variations: ProcessVariation[];
-  tribal_knowledge: TribalKnowledge[];
-  exceptions: ExceptionItem[];
+  context_intelligence: ContextIntelligence[];
   gap_analysis: GapAnalysis[];
   recommendations: Recommendation[];
   knowledge_graph: GraphData;

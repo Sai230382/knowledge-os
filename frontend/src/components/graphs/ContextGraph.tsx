@@ -11,6 +11,7 @@ type HopLevel = "all" | 1 | 2;
 
 interface ContextGraphProps {
   data: GraphData;
+  knowledgeNodes: GraphNode[]; // Shared nodes from knowledge graph
   analysis: AnalysisOutput;
   fullscreen?: boolean;
 }
@@ -67,7 +68,7 @@ function getSubgraphByHops(
   return { nodes: filteredNodes, edges: filteredEdges };
 }
 
-export default function ContextGraph({ data, analysis, fullscreen }: ContextGraphProps) {
+export default function ContextGraph({ data, knowledgeNodes, analysis, fullscreen }: ContextGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
@@ -86,9 +87,18 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
     return () => observer.disconnect();
   }, []);
 
-  // Sanitize: remove nodes with empty IDs and edges with invalid source/target
+  // Build node set: context graph reuses knowledge graph nodes + any extra context nodes
   const sanitizedData = useMemo(() => {
-    const validNodes = data.nodes.filter((n) => n.id && n.label);
+    const nodeMap = new Map<string, GraphNode>();
+    // Add knowledge graph nodes first (the shared node set)
+    (knowledgeNodes || []).forEach((n) => {
+      if (n.id && n.label) nodeMap.set(n.id, n);
+    });
+    // Add any context-specific nodes (backward compat)
+    (data.nodes || []).forEach((n) => {
+      if (n.id && n.label && !nodeMap.has(n.id)) nodeMap.set(n.id, n);
+    });
+    const validNodes = Array.from(nodeMap.values());
     const nodeIds = new Set(validNodes.map((n) => n.id));
     const validEdges = data.edges.filter((e) => {
       const src = typeof e.source === "string" ? e.source : e.source?.id;
@@ -96,7 +106,7 @@ export default function ContextGraph({ data, analysis, fullscreen }: ContextGrap
       return src && tgt && nodeIds.has(src) && nodeIds.has(tgt);
     });
     return { nodes: validNodes, edges: validEdges };
-  }, [data]);
+  }, [data, knowledgeNodes]);
 
   // Compute filtered graph data based on hop level and selected node
   const filteredData = useMemo(() => {

@@ -35,14 +35,9 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
     };
   });
 
-  // Find related tribal knowledge
-  const relatedTribal = analysis.tribal_knowledge.filter(
-    (tk) => tk.related_entities && tk.related_entities.includes(node.id)
-  );
-
-  // Find related exceptions
-  const relatedExceptions = analysis.exceptions.filter(
-    (ex) => ex.related_entities && ex.related_entities.includes(node.id)
+  // Find related context intelligence items
+  const relatedIntel = (analysis.context_intelligence || []).filter(
+    (ci) => ci.related_entities && ci.related_entities.includes(node.id)
   );
 
   const RISK_COLORS: Record<string, string> = {
@@ -137,54 +132,40 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
           </div>
         )}
 
-        {/* Tribal Knowledge */}
-        {relatedTribal.length > 0 && (
+        {/* Context Intelligence */}
+        {relatedIntel.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
-              Tribal Knowledge ({relatedTribal.length})
+              Context Intelligence ({relatedIntel.length})
             </h4>
             <ul className="space-y-2">
-              {relatedTribal.map((tk, i) => (
+              {relatedIntel.map((ci, i) => (
                 <li key={i} className="bg-amber-50 dark:bg-amber-950/50 border border-amber-100 dark:border-amber-800 rounded-lg px-3 py-2">
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">{tk.title}</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">{tk.description}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${RISK_COLORS[tk.risk_if_lost] || DEFAULT_RISK_COLOR}`}>
-                      Risk: {tk.risk_if_lost}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-200">{ci.title}</p>
+                    {ci.intel_type && (
+                      <span
+                        className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold text-white flex-shrink-0"
+                        style={{ backgroundColor: CONTEXT_TYPE_COLORS[ci.intel_type] || "#94A3B8" }}
+                      >
+                        {CONTEXT_TYPE_LABELS[ci.intel_type] || ci.intel_type}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">{ci.description}</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${RISK_COLORS[ci.risk_level] || DEFAULT_RISK_COLOR}`}>
+                      Risk: {ci.risk_level}
                     </span>
                   </div>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
-                    <span className="font-medium">Action:</span> {tk.formalization_action}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Exceptions */}
-        {relatedExceptions.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              Exceptions ({relatedExceptions.length})
-            </h4>
-            <ul className="space-y-2">
-              {relatedExceptions.map((ex, i) => (
-                <li key={i} className="bg-red-50 dark:bg-red-950/50 border border-red-100 dark:border-red-800 rounded-lg px-3 py-2">
-                  <p className="text-sm font-medium text-red-900 dark:text-red-200">{ex.title}</p>
-                  <p className="text-xs text-red-700 dark:text-red-400 mt-1 leading-relaxed">{ex.description}</p>
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">
-                    <span className="font-medium">Trigger:</span> {ex.trigger}
-                  </p>
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                    <span className="font-medium">Handling:</span> {ex.handling}
-                  </p>
+                  {ci.formalization_action && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+                      <span className="font-medium">Action:</span> {ci.formalization_action}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -192,9 +173,9 @@ export default function NodeDetailPanel({ node, edges, allNodes, analysis, onClo
         )}
 
         {/* No special data */}
-        {relatedTribal.length === 0 && relatedExceptions.length === 0 && (
+        {relatedIntel.length === 0 && (
           <div className="text-center py-4 text-slate-400 dark:text-slate-500">
-            <p className="text-xs">No tribal knowledge or exceptions linked to this entity</p>
+            <p className="text-xs">No context intelligence linked to this entity</p>
           </div>
         )}
       </div>

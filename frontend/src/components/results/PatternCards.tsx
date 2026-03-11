@@ -12,6 +12,22 @@ const CONFIDENCE_COLORS = {
   low: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
 };
 
+const INTEL_TYPE_LABELS: Record<string, string> = {
+  tribal_knowledge: "Tribal",
+  exception: "Exception",
+  workaround: "Workaround",
+  process_variation: "Process Var",
+  hidden_pattern: "Hidden Pattern",
+};
+
+const INTEL_TYPE_COLORS: Record<string, string> = {
+  tribal_knowledge: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300",
+  exception: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+  workaround: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
+  process_variation: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300",
+  hidden_pattern: "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300",
+};
+
 const GAP_TYPE_LABELS: Record<string, string> = {
   process_gap: "Process",
   knowledge_gap: "Knowledge",
@@ -50,51 +66,21 @@ export default function PatternCards({ analysis }: PatternCardsProps) {
         }))}
       />
 
-      {/* Process Variations */}
+      {/* Context Intelligence — unified hidden knowledge */}
       <PatternCard
-        title="Process Variations"
-        color="green"
-        items={(analysis.process_variations || []).map((p) => ({
-          title: p.title,
-          description: p.description,
-          badge: p.trigger ? `Trigger: ${p.trigger.slice(0, 30)}` : undefined,
-          details: p.impact ? (
-            <p className="text-xs text-slate-500 mt-1">
-              <span className="font-medium">Impact:</span> {p.impact}
-            </p>
-          ) : null,
-        }))}
-      />
-
-      {/* Tribal Knowledge */}
-      <PatternCard
-        title="Tribal Knowledge"
+        title="Context Intelligence"
         color="amber"
-        items={analysis.tribal_knowledge.map((p) => ({
-          title: p.title,
-          description: p.description,
-          badge: `Risk: ${p.risk_if_lost}`,
-          badgeClass: CONFIDENCE_COLORS[p.risk_if_lost],
-          details: (
-            <p className="text-xs text-slate-500 mt-1">
-              <span className="font-medium">Action:</span> {p.formalization_action}
-            </p>
-          ),
-        }))}
-      />
-
-      {/* Exceptions */}
-      <PatternCard
-        title="Exceptions"
-        color="red"
-        items={analysis.exceptions.map((p) => ({
-          title: p.title,
-          description: p.description,
-          badge: "Exception",
+        items={(analysis.context_intelligence || []).map((ci) => ({
+          title: ci.title,
+          description: ci.description,
+          badge: INTEL_TYPE_LABELS[ci.intel_type] || ci.intel_type || "Intel",
+          badgeClass: INTEL_TYPE_COLORS[ci.intel_type] || INTEL_TYPE_COLORS.tribal_knowledge,
           details: (
             <div className="text-xs text-slate-500 mt-1 space-y-0.5">
-              <p><span className="font-medium">Trigger:</span> {p.trigger}</p>
-              <p><span className="font-medium">Handling:</span> {p.handling}</p>
+              {ci.trigger && <p><span className="font-medium">Trigger:</span> {ci.trigger}</p>}
+              {ci.impact && <p><span className="font-medium">Impact:</span> {ci.impact}</p>}
+              {ci.formalization_action && <p><span className="font-medium">Action:</span> {ci.formalization_action}</p>}
+              <p><span className="font-medium">Risk:</span> {ci.risk_level}</p>
             </div>
           ),
         }))}
