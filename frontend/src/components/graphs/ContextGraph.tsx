@@ -255,7 +255,7 @@ export default function ContextGraph({ data, knowledgeNodes, analysis, fullscree
             <NodeDetailPanel
               node={selectedNode}
               edges={data.edges}
-              allNodes={data.nodes}
+              allNodes={sanitizedData.nodes}
               analysis={analysis}
               onClose={() => setSelectedNode(null)}
             />
