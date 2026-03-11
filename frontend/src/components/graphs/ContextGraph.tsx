@@ -88,6 +88,7 @@ export default function ContextGraph({ data, knowledgeNodes, analysis, fullscree
   }, []);
 
   // Build node set: context graph reuses knowledge graph nodes + any extra context nodes
+  // Then remove orphan nodes (no context edges) to keep the graph clean
   const sanitizedData = useMemo(() => {
     const nodeMap = new Map<string, GraphNode>();
     // Add knowledge graph nodes first (the shared node set)
@@ -98,14 +99,23 @@ export default function ContextGraph({ data, knowledgeNodes, analysis, fullscree
     (data.nodes || []).forEach((n) => {
       if (n.id && n.label && !nodeMap.has(n.id)) nodeMap.set(n.id, n);
     });
-    const validNodes = Array.from(nodeMap.values());
-    const nodeIds = new Set(validNodes.map((n) => n.id));
+    const allNodes = Array.from(nodeMap.values());
+    const allNodeIds = new Set(allNodes.map((n) => n.id));
     const validEdges = data.edges.filter((e) => {
       const src = typeof e.source === "string" ? e.source : e.source?.id;
       const tgt = typeof e.target === "string" ? e.target : e.target?.id;
-      return src && tgt && nodeIds.has(src) && nodeIds.has(tgt);
+      return src && tgt && allNodeIds.has(src) && allNodeIds.has(tgt);
     });
-    return { nodes: validNodes, edges: validEdges };
+    // Only keep nodes that have at least one context edge
+    const connectedIds = new Set<string>();
+    validEdges.forEach((e) => {
+      const src = typeof e.source === "string" ? e.source : e.source?.id;
+      const tgt = typeof e.target === "string" ? e.target : e.target?.id;
+      if (src) connectedIds.add(src);
+      if (tgt) connectedIds.add(tgt);
+    });
+    const connectedNodes = allNodes.filter((n) => connectedIds.has(n.id));
+    return { nodes: connectedNodes, edges: validEdges };
   }, [data, knowledgeNodes]);
 
   // Compute filtered graph data based on hop level and selected node

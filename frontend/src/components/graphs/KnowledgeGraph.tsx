@@ -31,7 +31,7 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     return () => observer.disconnect();
   }, []);
 
-  // Sanitize: remove nodes with empty IDs and edges with invalid source/target
+  // Sanitize: remove nodes with empty IDs, edges with invalid refs, and orphan nodes
   const sanitizedData = useMemo(() => {
     const validNodes = data.nodes.filter((n) => n.id && n.label);
     const nodeIds = new Set(validNodes.map((n) => n.id));
@@ -40,7 +40,16 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
       const tgt = typeof e.target === "string" ? e.target : e.target?.id;
       return src && tgt && nodeIds.has(src) && nodeIds.has(tgt);
     });
-    return { nodes: validNodes, edges: validEdges };
+    // Remove orphan nodes (no connections) — they float away and add clutter
+    const connectedIds = new Set<string>();
+    validEdges.forEach((e) => {
+      const src = typeof e.source === "string" ? e.source : e.source?.id;
+      const tgt = typeof e.target === "string" ? e.target : e.target?.id;
+      if (src) connectedIds.add(src);
+      if (tgt) connectedIds.add(tgt);
+    });
+    const connectedNodes = validNodes.filter((n) => connectedIds.has(n.id));
+    return { nodes: connectedNodes, edges: validEdges };
   }, [data]);
 
   // Build entity indicators map from context_intelligence
