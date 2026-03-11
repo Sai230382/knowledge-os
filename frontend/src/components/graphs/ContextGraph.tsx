@@ -144,10 +144,11 @@ export default function ContextGraph({ data, knowledgeNodes, analysis, fullscree
     edgeColorFn,
   });
 
-  if (data.nodes.length === 0) {
+  if (sanitizedData.edges.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400 dark:text-slate-500">
         <p className="text-sm">No context relationships found</p>
+        <p className="text-xs mt-1">Upload documents with operational details to uncover hidden patterns</p>
       </div>
     );
   }

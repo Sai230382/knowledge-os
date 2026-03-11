@@ -34,6 +34,38 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
+@router.get("/api/debug/latest-graphs")
+async def debug_latest_graphs(session: AsyncSession = Depends(get_session)):
+    """Debug: show graph data from the latest completed job."""
+    result = await session.execute(
+        select(AnalysisJob)
+        .where(AnalysisJob.status == "complete")
+        .order_by(desc(AnalysisJob.created_at))
+        .limit(1)
+    )
+    job = result.scalar_one_or_none()
+    if not job or not job.result_data:
+        return {"error": "No completed jobs found"}
+    data = job.result_data.get("analysis", job.result_data)
+    kg = data.get("knowledge_graph", {})
+    ctx = data.get("context_graph", {})
+    ci = data.get("context_intelligence", [])
+    return {
+        "job_id": job.id[:8],
+        "knowledge_graph": {
+            "node_count": len(kg.get("nodes", [])),
+            "edge_count": len(kg.get("edges", [])),
+            "sample_nodes": [n.get("id") for n in kg.get("nodes", [])[:5]],
+        },
+        "context_graph": {
+            "node_count": len(ctx.get("nodes", [])),
+            "edge_count": len(ctx.get("edges", [])),
+            "edges": ctx.get("edges", [])[:10],
+        },
+        "context_intelligence_count": len(ci),
+    }
+
+
 @router.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(job_id: str, session: AsyncSession = Depends(get_session)):
     result = await session.execute(
