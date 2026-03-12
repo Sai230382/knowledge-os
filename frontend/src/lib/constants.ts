@@ -1,27 +1,27 @@
 export const GRAPH_CONFIG = {
   forces: {
     charge: {
-      strength: -300,
-      distanceMin: 30,
-      distanceMax: 500,
+      strength: -500,
+      distanceMin: 50,
+      distanceMax: 800,
     },
     link: {
-      distance: 120,
-      strength: 0.4,
+      distance: 160,
+      strength: 0.3,
     },
     collision: {
-      radius: 40,
-      strength: 0.8,
-      iterations: 3,
+      radius: 55,
+      strength: 0.9,
+      iterations: 4,
     },
     center: {
-      strength: 0.05,
+      strength: 0.04,
     },
   },
   simulation: {
     alphaDecay: 0.02,
-    velocityDecay: 0.4,
-    warmupTicks: 100,
+    velocityDecay: 0.35,
+    warmupTicks: 150,
   },
 };
 

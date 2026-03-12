@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useForceGraph } from "@/hooks/useForceGraph";
 import GraphLegend from "./GraphLegend";
 import GraphControls from "./GraphControls";
@@ -13,11 +13,14 @@ interface KnowledgeGraphProps {
   fullscreen?: boolean;
 }
 
+const ENTITY_TYPES = ["person", "process", "technology", "concept"] as const;
+
 export default function KnowledgeGraph({ data, analysis, fullscreen }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -31,9 +34,9 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     return () => observer.disconnect();
   }, []);
 
-  // Sanitize: remove nodes with empty IDs, edges with invalid refs, and orphan nodes
+  // Sanitize: remove nodes with empty IDs, edges with invalid refs, orphan nodes, and filtered types
   const sanitizedData = useMemo(() => {
-    const validNodes = data.nodes.filter((n) => n.id && n.label);
+    const validNodes = data.nodes.filter((n) => n.id && n.label && !hiddenTypes.has(n.type));
     const nodeIds = new Set(validNodes.map((n) => n.id));
     const validEdges = data.edges.filter((e) => {
       const src = typeof e.source === "string" ? e.source : e.source?.id;
@@ -50,7 +53,7 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     });
     const connectedNodes = validNodes.filter((n) => connectedIds.has(n.id));
     return { nodes: connectedNodes, edges: validEdges };
-  }, [data]);
+  }, [data, hiddenTypes]);
 
   // Build entity indicators map from context_intelligence
   const entityIndicators = useMemo(() => {
@@ -72,8 +75,17 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     return map;
   }, [sanitizedData.nodes, analysis.context_intelligence]);
 
-  // Count by type
-  const typeCounts = useMemo(() => {
+  // Count by type (from full data, not filtered — so toggles always show counts)
+  const allTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    data.nodes.filter((n) => n.id && n.label).forEach((n) => {
+      counts[n.type] = (counts[n.type] || 0) + 1;
+    });
+    return counts;
+  }, [data.nodes]);
+
+  // Filtered counts for display
+  const filteredTypeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     sanitizedData.nodes.forEach((n) => {
       counts[n.type] = (counts[n.type] || 0) + 1;
@@ -81,19 +93,33 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     return counts;
   }, [sanitizedData.nodes]);
 
-  useForceGraph(svgRef, sanitizedData, dimensions, GRAPH_CONFIG, {
-    onNodeClick: (node) => {
-      // D3 sends null-ish when background is clicked
-      if (node && node.id) {
-        setSelectedNode(node);
+  const handleNodeClick = useCallback((node: GraphNode) => {
+    if (node && node.id) {
+      setSelectedNode(node);
+    } else {
+      setSelectedNode(null);
+    }
+  }, []);
+
+  const toggleType = useCallback((type: string) => {
+    setHiddenTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
       } else {
-        setSelectedNode(null);
+        next.add(type);
       }
-    },
+      return next;
+    });
+  }, []);
+
+  useForceGraph(svgRef, sanitizedData, dimensions, GRAPH_CONFIG, {
+    onNodeClick: handleNodeClick,
     entityIndicators,
+    edgeLabelMaxLength: 0,   // Hide edge labels — details in panel on click
   });
 
-  if (sanitizedData.nodes.length === 0) {
+  if (data.nodes.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400 dark:text-slate-500">
         <p className="text-sm">No entities found for knowledge graph</p>
@@ -103,23 +129,41 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
 
   return (
     <div className="flex flex-col h-full">
-      {/* Stats bar - entity counts by category */}
-      <div className="flex items-center gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-t-lg flex-shrink-0">
+      {/* Stats bar - entity counts by category + type filters */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-t-lg flex-shrink-0 flex-wrap">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
           {sanitizedData.nodes.length} entities, {sanitizedData.edges.length} relationships
         </span>
         <div className="h-3 border-l border-slate-300 dark:border-slate-600" />
-        {Object.entries(typeCounts).map(([type, count]) => (
-          <div key={type} className="flex items-center gap-1.5">
-            <div
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: getNodeColor(type) }}
-            />
-            <span className="text-xs text-slate-600 dark:text-slate-400">
-              {getNodeLabel(type)}: <span className="font-semibold">{count}</span>
-            </span>
-          </div>
-        ))}
+
+        {/* Entity type filter toggles */}
+        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Filter:</span>
+        {Object.entries(allTypeCounts).map(([type, totalCount]) => {
+          const isHidden = hiddenTypes.has(type);
+          const activeCount = filteredTypeCounts[type] || 0;
+          return (
+            <button
+              key={type}
+              onClick={() => toggleType(type)}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                isHidden
+                  ? "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 opacity-50"
+                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-200 dark:border-slate-600"
+              }`}
+              title={isHidden ? `Show ${getNodeLabel(type)}` : `Hide ${getNodeLabel(type)}`}
+            >
+              <div
+                className={`w-2.5 h-2.5 rounded-full transition-opacity ${isHidden ? "opacity-30" : ""}`}
+                style={{ backgroundColor: getNodeColor(type) }}
+              />
+              <span>{getNodeLabel(type)}</span>
+              <span className={`font-semibold ${isHidden ? "" : "text-slate-900 dark:text-white"}`}>
+                {isHidden ? totalCount : activeCount}
+              </span>
+            </button>
+          );
+        })}
+
         <div className="h-3 border-l border-slate-300 dark:border-slate-600" />
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
@@ -142,10 +186,10 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
             background: `linear-gradient(135deg, var(--graph-bg-from), var(--graph-bg-to))`,
           }}
         />
-        <GraphLegend activeTypes={Object.keys(typeCounts)} />
+        <GraphLegend activeTypes={Object.keys(filteredTypeCounts)} />
         {!selectedNode && (
           <div className="absolute top-3 left-3 backdrop-blur border rounded-lg px-3 py-1.5 text-xs" style={{ backgroundColor: 'var(--graph-hint-bg)', borderColor: 'var(--graph-hint-border)', color: 'var(--graph-hint-text)' }}>
-            Click a node to inspect details
+            Click a node to inspect details &middot; Toggle entity types above to filter
           </div>
         )}
 
@@ -155,7 +199,7 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
             <NodeDetailPanel
               node={selectedNode}
               edges={data.edges}
-              allNodes={data.nodes}
+              allNodes={sanitizedData.nodes}
               analysis={analysis}
               onClose={() => setSelectedNode(null)}
             />
