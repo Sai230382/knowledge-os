@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput
+from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput
 
 
 class FileMetadata(BaseModel):
@@ -67,6 +67,15 @@ class ReimagineRequest(BaseModel):
 
 class ReimagineResponse(BaseModel):
     reimagine: ReimagineOutput
+
+
+class SynthesisRequest(BaseModel):
+    current_analysis: dict
+    query: Optional[str] = None  # optional user question to address in the synthesis
+
+
+class SynthesisResponse(BaseModel):
+    synthesis: SynthesisOutput
 
 
 class HealthResponse(BaseModel):

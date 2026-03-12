@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput } from "./types";
+import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput, SynthesisOutput } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
@@ -123,6 +123,17 @@ export async function generateReimagine(
     current_analysis: currentAnalysis,
   }, { timeout: 300000 });
   return data.reimagine;
+}
+
+export async function generateSynthesis(
+  currentAnalysis: AnalysisOutput,
+  query?: string,
+): Promise<SynthesisOutput> {
+  const { data } = await api.post<{ synthesis: SynthesisOutput }>("/api/synthesize", {
+    current_analysis: currentAnalysis,
+    ...(query?.trim() && { query }),
+  }, { timeout: 300000 });
+  return data.synthesis;
 }
 
 export async function healthCheck(): Promise<boolean> {

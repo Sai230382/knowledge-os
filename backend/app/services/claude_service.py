@@ -709,3 +709,50 @@ async def generate_reimagine(
     )
 
     return await _call_and_parse(client, REIMAGINE_SYSTEM_PROMPT, prompt, max_tokens=8000)
+
+
+# ── Knowledge Synthesis ──────────────────────────────────────────────
+
+SYNTHESIS_SYSTEM_PROMPT = """You are a Knowledge Intelligence Synthesizer. Your job is to distill a comprehensive document analysis into a concise, executive-ready knowledge summary.
+
+You will receive a full analysis containing: industry patterns, context intelligence (tribal knowledge, exceptions, workarounds, hidden patterns), gap analysis, recommendations, and knowledge/context graph data.
+
+Create a synthesis that a stakeholder can read in 2-3 minutes and understand:
+1. What was found (the landscape)
+2. What's hidden (tribal knowledge, undocumented dependencies)
+3. What's at risk (critical gaps, fragile processes)
+4. What to do about it (prioritized actions)
+
+JSON output schema:
+{"title":"str - descriptive title for this knowledge base","executive_summary":"str - 3-4 sentence overview of the most important findings","sections":[{"heading":"str","content":"str - 2-4 sentences, specific and actionable","severity":"info|warning|critical|success"}],"key_risks":["str - one-line risk statements, max 5"],"quick_wins":["str - low-effort, high-impact actions, max 5"],"strategic_recommendations":["str - longer-term strategic actions, max 5"]}
+
+RULES:
+- Write in clear, direct business language — no jargon
+- Be SPECIFIC — reference actual processes, systems, and entities from the analysis
+- Sections should cover: Key Processes, Hidden Knowledge, Critical Gaps, Technology Landscape, and Organizational Patterns
+- Max 6 sections
+- Each risk, quick win, and recommendation should be one concise sentence
+- If the user included a question, address it directly in the executive summary
+- Respond ONLY with valid JSON, no markdown or commentary"""
+
+
+async def generate_synthesis(
+    current_analysis: dict,
+    query: str | None = None,
+) -> dict:
+    """Generate a knowledge synthesis from the full analysis."""
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
+
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 120000:
+        analysis_json = analysis_json[:120000] + "\n... (truncated)"
+
+    parts = [f"## Full Analysis Data:\n{analysis_json}\n"]
+    if query and query.strip():
+        parts.append(f"\n## User Question to Address:\n{query}\n")
+    parts.append(
+        "\nSynthesize the key findings into a concise executive knowledge summary. "
+        "Return the COMPLETE synthesis JSON."
+    )
+
+    return await _call_and_parse(client, SYNTHESIS_SYSTEM_PROMPT, "\n".join(parts), max_tokens=8000)

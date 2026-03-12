@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine
+from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis
 from app.services.url_service import download_file
 from app.services.job_service import create_and_run_job
 from app.schemas.responses import (
@@ -10,8 +10,9 @@ from app.schemas.responses import (
     AccumulateRequest, AccumulateResponse,
     BenchmarkRequest, BenchmarkResponse,
     ReimagineRequest, ReimagineResponse,
+    SynthesisRequest, SynthesisResponse,
 )
-from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput
+from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput
 
 router = APIRouter()
 
@@ -192,3 +193,17 @@ async def reimagine(request: ReimagineRequest):
     except Exception as e:
         raise HTTPException(500, f"Failed to generate reimagine scenarios: {str(e)}")
     return ReimagineResponse(reimagine=reimagine_output)
+
+
+@router.post("/api/synthesize", response_model=SynthesisResponse)
+async def synthesize(request: SynthesisRequest):
+    """Generate a knowledge synthesis from the full analysis."""
+    try:
+        data = await generate_synthesis(
+            request.current_analysis,
+            request.query,
+        )
+        synthesis_output = SynthesisOutput(**data)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate synthesis: {str(e)}")
+    return SynthesisResponse(synthesis=synthesis_output)

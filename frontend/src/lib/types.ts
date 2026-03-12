@@ -132,3 +132,21 @@ export interface ReimagineOutput {
   transformation_summary: string;
   total_impact_score: number;
 }
+
+
+// --- Knowledge Synthesis ---
+
+export interface SynthesisSection {
+  heading: string;
+  content: string;
+  severity: "info" | "warning" | "critical" | "success";
+}
+
+export interface SynthesisOutput {
+  title: string;
+  executive_summary: string;
+  sections: SynthesisSection[];
+  key_risks: string[];
+  quick_wins: string[];
+  strategic_recommendations: string[];
+}

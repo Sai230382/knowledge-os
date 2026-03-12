@@ -112,3 +112,20 @@ class ReimagineOutput(BaseModel):
     processes: list[ReimaginedProcess] = []
     transformation_summary: str = ""
     total_impact_score: float = 0.0
+
+
+# --- Knowledge Synthesis ---
+
+class SynthesisSection(BaseModel):
+    heading: str = ""
+    content: str = ""
+    severity: str = ""  # info, warning, critical, success
+
+
+class SynthesisOutput(BaseModel):
+    title: str = ""
+    executive_summary: str = ""
+    sections: list[SynthesisSection] = []
+    key_risks: list[str] = []
+    quick_wins: list[str] = []
+    strategic_recommendations: list[str] = []

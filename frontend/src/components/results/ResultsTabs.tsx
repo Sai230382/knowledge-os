@@ -6,14 +6,19 @@ import KnowledgeGraph from "../graphs/KnowledgeGraph";
 import ContextGraph from "../graphs/ContextGraph";
 import BenchmarkTab from "./BenchmarkTab";
 import ReimagineTab from "./ReimagineTab";
+import SynthesisTab from "./SynthesisTab";
 
 interface ResultsTabsProps {
   analysis: AnalysisOutput;
 }
 
-type Tab = "patterns" | "insights" | "knowledge" | "context" | "benchmarks" | "reimagine";
+type Tab = "synthesis" | "patterns" | "insights" | "knowledge" | "context" | "benchmarks" | "reimagine";
 
 const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
+  synthesis: {
+    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+    description: "Knowledge synthesis — executive summary distilling all findings into key risks, quick wins, and strategic recommendations.",
+  },
   patterns: {
     icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
     description: "Industry patterns and context intelligence — what formally exists and what's hidden in your data.",
@@ -41,7 +46,7 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
 };
 
 export default function ResultsTabs({ analysis }: ResultsTabsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("patterns");
+  const [activeTab, setActiveTab] = useState<Tab>("synthesis");
   const [fullscreenGraph, setFullscreenGraph] = useState<"knowledge" | "context" | null>(null);
   const [showInfo, setShowInfo] = useState(true);
 
@@ -49,6 +54,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
   const recsCount = (analysis.recommendations || []).length;
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "synthesis", label: "Synthesis" },
     { id: "patterns", label: "Patterns" },
     { id: "insights", label: "Insights", count: gapCount + recsCount },
     { id: "knowledge", label: "Knowledge Graph" },
@@ -134,6 +140,13 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* Synthesis tab */}
+      {activeTab === "synthesis" && (
+        <div className="flex-1 overflow-auto p-4">
+          <SynthesisTab analysis={analysis} />
         </div>
       )}
 
