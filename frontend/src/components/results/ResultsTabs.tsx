@@ -4,12 +4,14 @@ import { AnalysisOutput } from "@/lib/types";
 import PatternCards from "./PatternCards";
 import KnowledgeGraph from "../graphs/KnowledgeGraph";
 import ContextGraph from "../graphs/ContextGraph";
+import BenchmarkTab from "./BenchmarkTab";
+import ReimagineTab from "./ReimagineTab";
 
 interface ResultsTabsProps {
   analysis: AnalysisOutput;
 }
 
-type Tab = "patterns" | "insights" | "knowledge" | "context";
+type Tab = "patterns" | "insights" | "knowledge" | "context" | "benchmarks" | "reimagine";
 
 const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
   patterns: {
@@ -28,6 +30,14 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
     icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
     description: "The HIDDEN intelligence layer — how tribal knowledge, exceptions, and undocumented patterns create informal dependencies. This is the context that powers autonomous decisions.",
   },
+  benchmarks: {
+    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+    description: "Industry benchmarks — compare your current processes against best-in-class practices. Get maturity scores and identify priority improvement areas.",
+  },
+  reimagine: {
+    icon: "M13 10V3L4 14h7v7l9-11h-7z",
+    description: "Reimagine Lab — see how AI, Agentic AI, and intelligent automation can transform your current processes. Side-by-side As-Is vs AI-powered To-Be.",
+  },
 };
 
 export default function ResultsTabs({ analysis }: ResultsTabsProps) {
@@ -43,6 +53,8 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
     { id: "insights", label: "Insights", count: gapCount + recsCount },
     { id: "knowledge", label: "Knowledge Graph" },
     { id: "context", label: "Context Graph" },
+    { id: "benchmarks", label: "Benchmarks" },
+    { id: "reimagine", label: "Reimagine" },
   ];
 
   // Fullscreen graph overlay
@@ -174,6 +186,18 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           <div className="flex-1 min-h-0 px-4 pb-3">
             <ContextGraph data={analysis.context_graph} knowledgeNodes={analysis.knowledge_graph.nodes} analysis={analysis} />
           </div>
+        </div>
+      )}
+
+      {activeTab === "benchmarks" && (
+        <div className="flex-1 overflow-auto p-4">
+          <BenchmarkTab analysis={analysis} />
+        </div>
+      )}
+
+      {activeTab === "reimagine" && (
+        <div className="flex-1 overflow-auto p-4">
+          <ReimagineTab analysis={analysis} />
         </div>
       )}
     </div>

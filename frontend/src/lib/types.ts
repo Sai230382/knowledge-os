@@ -94,3 +94,41 @@ export interface Project {
   result: AnalysisResponse | null;
   error: string;
 }
+
+
+// --- Industry Benchmarks ---
+
+export interface BenchmarkComparison {
+  area: string;
+  current_state: string;
+  industry_benchmark: string;
+  delta: string;
+  maturity_score: number;
+  priority: "high" | "medium" | "low";
+}
+
+export interface BenchmarkOutput {
+  industry: string;
+  comparisons: BenchmarkComparison[];
+  overall_maturity: number;
+  summary: string;
+}
+
+
+// --- Reimagine Lab ---
+
+export interface ReimaginedProcess {
+  process_name: string;
+  as_is: string;
+  to_be: string;
+  ai_technology: string;
+  impact_score: number;
+  implementation_effort: "low" | "medium" | "high";
+  timeline: string;
+}
+
+export interface ReimagineOutput {
+  processes: ReimaginedProcess[];
+  transformation_summary: string;
+  total_impact_score: number;
+}

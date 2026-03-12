@@ -1,13 +1,17 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import refine_analysis
+from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine
 from app.services.url_service import download_file
 from app.services.job_service import create_and_run_job
 from app.schemas.responses import (
     FileMetadata, PathRequest, TextRequest,
     UrlRequest, RefineRequest, RefineResponse,
+    AccumulateRequest, AccumulateResponse,
+    BenchmarkRequest, BenchmarkResponse,
+    ReimagineRequest, ReimagineResponse,
 )
+from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput
 
 router = APIRouter()
 
@@ -151,3 +155,40 @@ async def refine(request: RefineRequest):
         raise HTTPException(500, f"Failed to refine analysis: {str(e)}")
 
     return RefineResponse(analysis=updated)
+
+
+@router.post("/api/accumulate", response_model=AccumulateResponse)
+async def accumulate(request: AccumulateRequest):
+    """Merge a new analysis into an existing one, accumulating knowledge."""
+    try:
+        merged = await accumulate_analysis(
+            request.existing_analysis, request.new_analysis
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Failed to accumulate analysis: {str(e)}")
+    return AccumulateResponse(analysis=merged)
+
+
+@router.post("/api/benchmark", response_model=BenchmarkResponse)
+async def benchmark(request: BenchmarkRequest):
+    """Generate industry benchmark comparisons for the current analysis."""
+    try:
+        data = await generate_benchmarks(
+            request.current_analysis,
+            request.industry_context,
+        )
+        benchmark_output = BenchmarkOutput(**data)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate benchmarks: {str(e)}")
+    return BenchmarkResponse(benchmark=benchmark_output)
+
+
+@router.post("/api/reimagine", response_model=ReimagineResponse)
+async def reimagine(request: ReimagineRequest):
+    """Generate AI transformation scenarios for current processes."""
+    try:
+        data = await generate_reimagine(request.current_analysis)
+        reimagine_output = ReimagineOutput(**data)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate reimagine scenarios: {str(e)}")
+    return ReimagineResponse(reimagine=reimagine_output)

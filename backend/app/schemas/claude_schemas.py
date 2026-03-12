@@ -76,3 +76,39 @@ class AnalysisOutput(BaseModel):
     recommendations: list[Recommendation] = []
     knowledge_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
     context_graph: ContextGraphData = ContextGraphData(nodes=[], edges=[])
+
+
+# --- Industry Benchmarks ---
+
+class BenchmarkComparison(BaseModel):
+    area: str = ""
+    current_state: str = ""
+    industry_benchmark: str = ""
+    delta: str = ""
+    maturity_score: float = 0.0  # 1-5 scale
+    priority: str = "medium"
+
+
+class BenchmarkOutput(BaseModel):
+    industry: str = ""
+    comparisons: list[BenchmarkComparison] = []
+    overall_maturity: float = 0.0
+    summary: str = ""
+
+
+# --- Reimagine Lab ---
+
+class ReimaginedProcess(BaseModel):
+    process_name: str = ""
+    as_is: str = ""
+    to_be: str = ""
+    ai_technology: str = ""
+    impact_score: float = 0.0  # 1-10 scale
+    implementation_effort: str = ""  # low, medium, high
+    timeline: str = ""
+
+
+class ReimagineOutput(BaseModel):
+    processes: list[ReimaginedProcess] = []
+    transformation_summary: str = ""
+    total_impact_score: float = 0.0

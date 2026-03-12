@@ -5,7 +5,7 @@ import UrlInput from "../input/UrlInput";
 import PathInput from "../input/PathInput";
 import ChatInput from "../input/ChatInput";
 import ThemeToggle from "../shared/ThemeToggle";
-import { uploadFiles, analyzeUrl, analyzePath, analyzeText, refineAnalysis } from "@/lib/api";
+import { uploadFiles, analyzeUrl, analyzePath, analyzeText, refineAnalysis, accumulateAnalysis } from "@/lib/api";
 import { AnalysisResponse } from "@/lib/types";
 import axios from "axios";
 
@@ -95,12 +95,30 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
 
   const hasResults = !!currentResult;
 
+  // Helper: merge new result into existing or return as-is
+  const mergeOrReplace = async (newResult: AnalysisResponse): Promise<AnalysisResponse> => {
+    if (!currentResult) return newResult;
+    // Accumulate: merge new analysis into existing knowledge base
+    const mergedAnalysis = await accumulateAnalysis(
+      currentResult.analysis,
+      newResult.analysis,
+    );
+    return {
+      ...newResult,
+      analysis: mergedAnalysis,
+      files_processed: currentResult.files_processed + newResult.files_processed,
+      total_text_length: currentResult.total_text_length + newResult.total_text_length,
+      metadata: [...currentResult.metadata, ...newResult.metadata],
+    };
+  };
+
   const handleFiles = async (files: File[]) => {
     setIsLoading(true);
     onError("");
     try {
-      const result = await uploadFiles(files, instructions);
-      onResult(result);
+      const newResult = await uploadFiles(files, instructions);
+      const finalResult = await mergeOrReplace(newResult);
+      onResult(finalResult);
     } catch (err: unknown) {
       const msg = getErrorMessage(err, "Failed to analyze files");
       onError(msg);
@@ -113,8 +131,9 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
     setIsLoading(true);
     onError("");
     try {
-      const result = await analyzePath(path, instructions);
-      onResult(result);
+      const newResult = await analyzePath(path, instructions);
+      const finalResult = await mergeOrReplace(newResult);
+      onResult(finalResult);
     } catch (err: unknown) {
       const msg = getErrorMessage(err, "Failed to analyze path");
       onError(msg);
@@ -127,8 +146,9 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
     setIsLoading(true);
     onError("");
     try {
-      const result = await analyzeUrl(url, instructions);
-      onResult(result);
+      const newResult = await analyzeUrl(url, instructions);
+      const finalResult = await mergeOrReplace(newResult);
+      onResult(finalResult);
     } catch (err: unknown) {
       const msg = getErrorMessage(err, "Failed to analyze URL");
       onError(msg);
@@ -141,8 +161,9 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
     setIsLoading(true);
     onError("");
     try {
-      const result = await analyzeText(text, instructions);
-      onResult(result);
+      const newResult = await analyzeText(text, instructions);
+      const finalResult = await mergeOrReplace(newResult);
+      onResult(finalResult);
     } catch (err: unknown) {
       const msg = getErrorMessage(err, "Failed to analyze text");
       onError(msg);
@@ -243,6 +264,17 @@ export default function LeftPanel({ onResult, onError, isLoading, setIsLoading, 
             <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
             <span>or add more data to grow knowledge</span>
             <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                onResult(null);
+                setQueryHistory([]);
+              }}
+              className="text-[11px] text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+            >
+              Clear &amp; start fresh
+            </button>
           </div>
         </div>
       )}

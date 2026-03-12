@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from .claude_schemas import AnalysisOutput
+from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput
 
 
 class FileMetadata(BaseModel):
@@ -41,6 +41,32 @@ class RefineRequest(BaseModel):
 
 class RefineResponse(BaseModel):
     analysis: AnalysisOutput
+
+
+class AccumulateRequest(BaseModel):
+    existing_analysis: dict
+    new_analysis: dict
+
+
+class AccumulateResponse(BaseModel):
+    analysis: AnalysisOutput
+
+
+class BenchmarkRequest(BaseModel):
+    current_analysis: dict
+    industry_context: Optional[str] = None
+
+
+class BenchmarkResponse(BaseModel):
+    benchmark: BenchmarkOutput
+
+
+class ReimagineRequest(BaseModel):
+    current_analysis: dict
+
+
+class ReimagineResponse(BaseModel):
+    reimagine: ReimagineOutput
 
 
 class HealthResponse(BaseModel):

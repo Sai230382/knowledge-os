@@ -612,3 +612,100 @@ async def accumulate_analysis(
 
     data = await _call_and_parse(client, ACCUMULATE_SYSTEM_PROMPT, prompt, max_tokens=16384)
     return AnalysisOutput(**data)
+
+
+# ── Industry Benchmarks ──────────────────────────────────────────────
+
+BENCHMARK_SYSTEM_PROMPT = """You are an Industry Benchmarking Specialist. Compare an organization's current processes, gaps, and practices against industry best practices.
+
+For each significant process or gap area found in the analysis:
+1. AREA: The process or capability being benchmarked
+2. CURRENT STATE: What the organization does today (from the analysis)
+3. INDUSTRY BENCHMARK: What best-in-class organizations do
+4. DELTA: The specific gap between current and best practice
+5. MATURITY SCORE: 1=ad-hoc, 2=developing, 3=defined, 4=managed, 5=optimized
+6. PRIORITY: high, medium, or low (based on business impact of closing the gap)
+
+Focus on the most impactful areas. Max 8 comparisons.
+
+JSON output schema:
+{"industry":"str","comparisons":[{"area":"str","current_state":"str","industry_benchmark":"str","delta":"str","maturity_score":3.0,"priority":"high|medium|low"}],"overall_maturity":3.0,"summary":"str"}
+
+RULES:
+- Be specific to the industry evident in the analysis
+- Reference actual processes and entities from the analysis data
+- Maturity scores should be honest — do not inflate
+- The summary should be 2-3 sentences about the overall maturity posture
+- Respond ONLY with valid JSON, no markdown or commentary"""
+
+
+async def generate_benchmarks(
+    current_analysis: dict,
+    industry_context: str | None = None,
+) -> dict:
+    """Generate industry benchmark comparisons for the current analysis."""
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
+
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 120000:
+        analysis_json = analysis_json[:120000] + "\n... (truncated)"
+
+    parts = [f"## Current Analysis:\n{analysis_json}\n"]
+    if industry_context and industry_context.strip():
+        parts.append(f"\n## Industry Context (from user):\n{industry_context}\n")
+    parts.append(
+        "\nGenerate industry benchmark comparisons for the key processes and gaps identified. "
+        "Return the COMPLETE benchmark JSON."
+    )
+
+    return await _call_and_parse(client, BENCHMARK_SYSTEM_PROMPT, "\n".join(parts), max_tokens=8000)
+
+
+# ── Reimagine Lab ────────────────────────────────────────────────────
+
+REIMAGINE_SYSTEM_PROMPT = """You are an AI Transformation Architect. Analyze an organization's current processes and design how AI, Agentic AI, and intelligent automation can transform them.
+
+For each key process found in the analysis:
+1. PROCESS NAME: The process being reimagined
+2. AS-IS: Current state — manual steps, pain points, gaps, tribal knowledge dependencies
+3. TO-BE: AI-transformed future state — automated, intelligent, autonomous
+4. AI TECHNOLOGY: Specific technology that enables the transformation (e.g., Agentic AI workflow orchestration, LLM-powered document extraction, predictive analytics, intelligent routing, conversational AI agents, RPA + AI hybrid)
+5. IMPACT SCORE: 1-10 (10 = transformative business impact)
+6. IMPLEMENTATION EFFORT: low, medium, or high
+7. TIMELINE: Estimated implementation timeline (e.g., "2-3 months", "6-12 months")
+
+Focus on the highest-impact transformations. Max 8 processes.
+
+JSON output schema:
+{"processes":[{"process_name":"str","as_is":"str","to_be":"str","ai_technology":"str","impact_score":7.0,"implementation_effort":"low|medium|high","timeline":"str"}],"transformation_summary":"str","total_impact_score":7.0}
+
+RULES:
+- Be SPECIFIC about which AI technology applies — never generic "use AI"
+- Reference actual processes, tribal knowledge, and gaps from the analysis
+- Prioritize Agentic AI opportunities where autonomous decision-making replaces manual workflows
+- Show how context intelligence (tribal knowledge, workarounds) can be formalized into AI systems
+- Impact scores should reflect genuine business value
+- The transformation_summary should be 2-3 sentences about the overall AI transformation potential
+- Respond ONLY with valid JSON, no markdown or commentary"""
+
+
+async def generate_reimagine(
+    current_analysis: dict,
+) -> dict:
+    """Generate AI transformation scenarios for current processes."""
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
+
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 120000:
+        analysis_json = analysis_json[:120000] + "\n... (truncated)"
+
+    prompt = (
+        f"## Current Analysis:\n{analysis_json}\n\n"
+        f"Generate AI and Agentic AI transformation scenarios for the key processes. "
+        f"Show how each process transforms from its current manual/fragmented state "
+        f"to an AI-powered, intelligent future state. "
+        f"Pay special attention to tribal knowledge and workarounds that can be formalized into AI systems. "
+        f"Return the COMPLETE reimagine JSON."
+    )
+
+    return await _call_and_parse(client, REIMAGINE_SYSTEM_PROMPT, prompt, max_tokens=8000)

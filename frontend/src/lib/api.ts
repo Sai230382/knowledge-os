@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AnalysisOutput, AnalysisResponse, Project } from "./types";
+import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
@@ -92,6 +92,37 @@ export async function refineAnalysis(
     query,
   }, { timeout: 300000 });
   return data.analysis;
+}
+
+export async function accumulateAnalysis(
+  existingAnalysis: AnalysisOutput,
+  newAnalysis: AnalysisOutput,
+): Promise<AnalysisOutput> {
+  const { data } = await api.post<{ analysis: AnalysisOutput }>("/api/accumulate", {
+    existing_analysis: existingAnalysis,
+    new_analysis: newAnalysis,
+  }, { timeout: 300000 });
+  return data.analysis;
+}
+
+export async function generateBenchmarks(
+  currentAnalysis: AnalysisOutput,
+  industryContext?: string,
+): Promise<BenchmarkOutput> {
+  const { data } = await api.post<{ benchmark: BenchmarkOutput }>("/api/benchmark", {
+    current_analysis: currentAnalysis,
+    ...(industryContext?.trim() && { industry_context: industryContext }),
+  }, { timeout: 300000 });
+  return data.benchmark;
+}
+
+export async function generateReimagine(
+  currentAnalysis: AnalysisOutput,
+): Promise<ReimagineOutput> {
+  const { data } = await api.post<{ reimagine: ReimagineOutput }>("/api/reimagine", {
+    current_analysis: currentAnalysis,
+  }, { timeout: 300000 });
+  return data.reimagine;
 }
 
 export async function healthCheck(): Promise<boolean> {
