@@ -2,10 +2,22 @@
 import { useState } from "react";
 import { AnalysisOutput, SynthesisOutput } from "@/lib/types";
 import { generateSynthesis } from "@/lib/api";
+import dynamic from "next/dynamic";
+
+// Dynamically import PDF utilities (client-side only)
+const PDFDownloadButton = dynamic(() => import("@/components/pdf/PDFDownloadButton"), {
+  ssr: false,
+  loading: () => (
+    <button disabled className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg">
+      Loading…
+    </button>
+  ),
+});
 
 interface SynthesisTabProps {
   analysis: AnalysisOutput;
 }
+
 
 const SEVERITY_STYLES: Record<string, { bg: string; border: string; icon: string; iconColor: string }> = {
   info: {
@@ -100,15 +112,18 @@ export default function SynthesisTab({ analysis }: SynthesisTabProps) {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Title + Regenerate */}
-      <div className="flex items-start justify-between">
+      {/* Title + Actions */}
+      <div className="flex items-start justify-between gap-3">
         <h2 className="text-xl font-bold text-slate-800 dark:text-white">{synthesis.title}</h2>
-        <button
-          onClick={() => setSynthesis(null)}
-          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0 mt-1"
-        >
-          Regenerate
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0 mt-1">
+          <PDFDownloadButton synthesis={synthesis} analysis={analysis} />
+          <button
+            onClick={() => setSynthesis(null)}
+            className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          >
+            Regenerate
+          </button>
+        </div>
       </div>
 
       {/* Executive Summary */}
