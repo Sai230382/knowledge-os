@@ -8,13 +8,13 @@ interface ProcessFlowChartProps {
   fullscreen?: boolean;
 }
 
-// Layout constants
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 56;
-const DECISION_SIZE = 72;
-const RANK_GAP_Y = 100;
-const SIBLING_GAP_X = 40;
-const PADDING = 60;
+// Layout constants — generous sizing for readability
+const NODE_WIDTH = 260;
+const NODE_HEIGHT = 70;
+const DECISION_SIZE = 90;
+const RANK_GAP_Y = 120;
+const SIBLING_GAP_X = 60;
+const PADDING = 80;
 
 // Colors
 const STEP_COLORS: Record<string, { fill: string; stroke: string; text: string }> = {
@@ -38,6 +38,30 @@ interface LayoutEdge {
   source: LayoutNode;
   target: LayoutNode;
   label: string;
+}
+
+/** Word-wrap text into lines that fit within maxWidth (approximate at ~7px per char) */
+function wrapText(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? current + " " + word : word;
+    if (test.length <= maxChars) {
+      current = test;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  // Max 2 lines, truncate if more
+  if (lines.length > 2) {
+    lines[1] = lines[1].slice(0, maxChars - 3) + "...";
+    return lines.slice(0, 2);
+  }
+  return lines;
 }
 
 function computeLayout(flow: ProcessFlow): { nodes: LayoutNode[]; edges: LayoutEdge[] } {
@@ -89,7 +113,6 @@ function computeLayout(flow: ProcessFlow): { nodes: LayoutNode[]; edges: LayoutE
   // Position nodes
   const layoutNodes: LayoutNode[] = [];
   const nodeMap = new Map<string, LayoutNode>();
-
   const sortedRanks = Array.from(rankGroups.keys()).sort((a, b) => a - b);
 
   sortedRanks.forEach((rank) => {
@@ -99,7 +122,7 @@ function computeLayout(flow: ProcessFlow): { nodes: LayoutNode[]; edges: LayoutE
 
     group.forEach((step, i) => {
       const isDiamond = step.step_type === "decision";
-      const w = isDiamond ? DECISION_SIZE * 1.8 : NODE_WIDTH;
+      const w = isDiamond ? DECISION_SIZE * 2 : NODE_WIDTH;
       const h = isDiamond ? DECISION_SIZE : NODE_HEIGHT;
       const node: LayoutNode = {
         step,
@@ -130,7 +153,7 @@ function computeLayout(flow: ProcessFlow): { nodes: LayoutNode[]; edges: LayoutE
   return { nodes: layoutNodes, edges: layoutEdges };
 }
 
-export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartProps) {
+export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedStep, setSelectedStep] = useState<ProcessStep | null>(null);
@@ -150,60 +173,61 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
     const containerRect = containerRef.current.getBoundingClientRect();
     const width = containerRect.width;
     const height = containerRect.height;
+    if (width < 10 || height < 10) return; // Guard against invisible container
 
     svg.attr("width", width).attr("height", height);
 
-    // Defs for arrowheads
+    // Defs for arrowheads and drop shadow
     const defs = svg.append("defs");
 
-    defs
-      .append("marker")
-      .attr("id", "arrow")
-      .attr("viewBox", "0 0 10 6")
-      .attr("refX", 10)
-      .attr("refY", 3)
-      .attr("markerWidth", 10)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,0 L10,3 L0,6 Z")
-      .attr("fill", "#94A3B8");
+    // Drop shadow filter
+    const filter = defs.append("filter").attr("id", "shadow").attr("x", "-10%").attr("y", "-10%").attr("width", "120%").attr("height", "130%");
+    filter.append("feDropShadow").attr("dx", 0).attr("dy", 2).attr("stdDeviation", 3).attr("flood-opacity", 0.08);
 
-    defs
-      .append("marker")
-      .attr("id", "arrow-red")
-      .attr("viewBox", "0 0 10 6")
-      .attr("refX", 10)
-      .attr("refY", 3)
-      .attr("markerWidth", 10)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,0 L10,3 L0,6 Z")
-      .attr("fill", "#EF4444");
+    // Arrow markers
+    [
+      { id: "arrow", color: "#94A3B8" },
+      { id: "arrow-red", color: "#EF4444" },
+    ].forEach(({ id, color }) => {
+      defs
+        .append("marker")
+        .attr("id", id)
+        .attr("viewBox", "0 0 10 6")
+        .attr("refX", 10)
+        .attr("refY", 3)
+        .attr("markerWidth", 10)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,0 L10,3 L0,6 Z")
+        .attr("fill", color);
+    });
 
     // Zoom group
     const g = svg.append("g");
 
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.2, 3])
+      .scaleExtent([0.15, 4])
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
       });
 
     svg.call(zoom);
 
-    // Center the graph
+    // Auto-fit: compute bounding box and fill the container
+    if (layout.nodes.length === 0) return;
     const allX = layout.nodes.map((n) => n.x);
     const allY = layout.nodes.map((n) => n.y);
     const minX = Math.min(...allX) - NODE_WIDTH;
     const maxX = Math.max(...allX) + NODE_WIDTH;
-    const minY = Math.min(...allY) - NODE_HEIGHT;
+    const minY = Math.min(...allY) - PADDING;
     const maxY = Math.max(...allY) + NODE_HEIGHT + PADDING;
     const graphWidth = maxX - minX;
     const graphHeight = maxY - minY;
-    const scale = Math.min(width / graphWidth, height / graphHeight, 1) * 0.85;
+
+    // Scale to FILL — use 0.92 factor so there's only a small margin
+    const scale = Math.min(width / graphWidth, height / graphHeight) * 0.92;
     const tx = width / 2 - ((minX + maxX) / 2) * scale;
     const ty = height / 2 - ((minY + maxY) / 2) * scale;
 
@@ -213,13 +237,12 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
     layout.edges.forEach((edge) => {
       const sx = edge.source.x;
       const sy = edge.source.y + edge.source.height / 2;
-      const tx = edge.target.x;
-      const ty = edge.target.y - edge.target.height / 2;
+      const ex = edge.target.x;
+      const ey = edge.target.y - edge.target.height / 2;
       const isException = edge.target.step.step_type === "exception";
 
-      // Curved path
-      const midY = (sy + ty) / 2;
-      const pathData = `M ${sx},${sy} C ${sx},${midY} ${tx},${midY} ${tx},${ty}`;
+      const midY = (sy + ey) / 2;
+      const pathData = `M ${sx},${sy} C ${sx},${midY} ${ex},${midY} ${ex},${ey}`;
 
       g.append("path")
         .attr("d", pathData)
@@ -229,15 +252,16 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
         .attr("stroke-dasharray", isException ? "6,3" : "none")
         .attr("marker-end", isException ? "url(#arrow-red)" : "url(#arrow)");
 
-      // Branch label
+      // Branch label pill
       if (edge.label) {
-        const labelX = (sx + tx) / 2;
+        const labelX = (sx + ex) / 2 + (sx === ex ? 0 : (ex > sx ? 12 : -12));
         const labelY = midY - 8;
+        const pillW = Math.max(edge.label.length * 7 + 12, 36);
 
         g.append("rect")
-          .attr("x", labelX - 18)
+          .attr("x", labelX - pillW / 2)
           .attr("y", labelY - 10)
-          .attr("width", 36)
+          .attr("width", pillW)
           .attr("height", 18)
           .attr("rx", 9)
           .attr("fill", "white")
@@ -251,6 +275,7 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
           .attr("font-size", "10px")
           .attr("font-weight", "600")
           .attr("fill", "#64748B")
+          .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif")
           .text(edge.label);
       }
     });
@@ -261,16 +286,17 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
       const nodeGroup = g
         .append("g")
         .attr("cursor", "pointer")
+        .attr("filter", "url(#shadow)")
         .on("click", () => handleStepClick(node.step));
 
       if (node.step.step_type === "decision") {
-        // Diamond shape
+        // Diamond shape — larger
         const size = DECISION_SIZE / 2;
         const points = [
           [node.x, node.y - size],
-          [node.x + size * 1.3, node.y],
+          [node.x + size * 1.5, node.y],
           [node.x, node.y + size],
-          [node.x - size * 1.3, node.y],
+          [node.x - size * 1.5, node.y],
         ]
           .map((p) => p.join(","))
           .join(" ");
@@ -282,21 +308,28 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
           .attr("stroke", colors.stroke)
           .attr("stroke-width", 2);
 
-        // Decision text (condition)
+        // Decision text — wrap into 2 lines
         const label = node.step.condition || node.step.label;
-        const truncated = label.length > 25 ? label.slice(0, 22) + "..." : label;
-        nodeGroup
+        const lines = wrapText(label, 20);
+        const textEl = nodeGroup
           .append("text")
           .attr("x", node.x)
-          .attr("y", node.y + 4)
           .attr("text-anchor", "middle")
           .attr("font-size", "11px")
           .attr("font-weight", "600")
           .attr("fill", colors.text)
-          .text(truncated);
+          .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif");
+
+        lines.forEach((line, i) => {
+          textEl
+            .append("tspan")
+            .attr("x", node.x)
+            .attr("dy", i === 0 ? (lines.length === 1 ? "0.35em" : "-0.35em") : "1.2em")
+            .text(line);
+        });
       } else {
-        // Rectangle (rounded for start/end)
-        const rx = node.step.step_type === "start" || node.step.step_type === "end" ? 24 : 8;
+        // Rectangle
+        const rx = node.step.step_type === "start" || node.step.step_type === "end" ? 28 : 10;
         const isException = node.step.step_type === "exception";
 
         nodeGroup
@@ -311,39 +344,46 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
           .attr("stroke-width", 2)
           .attr("stroke-dasharray", isException ? "6,3" : "none");
 
-        // Label text
+        // Label text — wrap into 2 lines for longer labels
         const label = node.step.label;
-        const truncated = label.length > 28 ? label.slice(0, 25) + "..." : label;
-        nodeGroup
+        const lines = wrapText(label, 32);
+        const textEl = nodeGroup
           .append("text")
           .attr("x", node.x)
-          .attr("y", node.y + 4)
           .attr("text-anchor", "middle")
-          .attr("font-size", "12px")
+          .attr("font-size", "13px")
           .attr("font-weight", "600")
           .attr("fill", colors.text)
-          .text(truncated);
-      }
+          .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif");
 
-      // Step type icon indicator
-      if (node.step.step_type === "exception") {
-        nodeGroup
-          .append("text")
-          .attr("x", node.x + node.width / 2 - 12)
-          .attr("y", node.y - node.height / 2 + 14)
-          .attr("font-size", "12px")
-          .text("⚠");
+        lines.forEach((line, i) => {
+          textEl
+            .append("tspan")
+            .attr("x", node.x)
+            .attr("dy", i === 0 ? (lines.length === 1 ? "0.35em" : "-0.35em") : "1.3em")
+            .text(line);
+        });
+
+        // Warning icon for exceptions
+        if (isException) {
+          nodeGroup
+            .append("text")
+            .attr("x", node.x + node.width / 2 - 16)
+            .attr("y", node.y - node.height / 2 + 16)
+            .attr("font-size", "13px")
+            .text("⚠");
+        }
       }
     });
   }, [layout, handleStepClick]);
 
   return (
-    <div ref={containerRef} className={`relative w-full ${fullscreen ? "h-full" : "h-[500px]"} bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden`}>
+    <div ref={containerRef} className="relative w-full h-full bg-white dark:bg-slate-950 overflow-hidden">
       <svg ref={svgRef} className="w-full h-full" />
 
       {/* Step Detail Panel */}
       {selectedStep && (
-        <div className="absolute top-3 right-3 w-80 max-h-[90%] overflow-y-auto bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 p-4">
+        <div className="absolute top-3 right-3 w-80 max-h-[90%] overflow-y-auto bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 p-4 z-10">
           <div className="flex items-center justify-between mb-3">
             <span
               className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -369,7 +409,7 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
           </div>
           <h3 className="font-semibold text-sm text-slate-800 dark:text-white mb-2">{selectedStep.label}</h3>
           {selectedStep.description && (
-            <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">{selectedStep.description}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">{selectedStep.description}</p>
           )}
           {selectedStep.condition && (
             <div className="mb-3">
@@ -393,14 +433,14 @@ export default function ProcessFlowChart({ flow, fullscreen }: ProcessFlowChartP
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
+      <div className="absolute bottom-3 left-3 flex items-center gap-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 z-10">
         {Object.entries(STEP_COLORS).map(([type, colors]) => (
-          <div key={type} className="flex items-center gap-1">
+          <div key={type} className="flex items-center gap-1.5">
             <div
               className="w-3 h-3 rounded-sm border"
               style={{ backgroundColor: colors.fill, borderColor: colors.stroke }}
             />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{type}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize font-medium">{type}</span>
           </div>
         ))}
       </div>
