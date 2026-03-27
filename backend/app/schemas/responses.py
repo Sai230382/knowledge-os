@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput
+from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlowOutput, ProcessFlow
 
 
 class FileMetadata(BaseModel):
@@ -76,6 +76,14 @@ class SynthesisRequest(BaseModel):
 
 class SynthesisResponse(BaseModel):
     synthesis: SynthesisOutput
+
+
+class ProcessFlowRequest(BaseModel):
+    current_analysis: dict
+
+
+class ProcessFlowResponse(BaseModel):
+    process_flows: list[ProcessFlow]
 
 
 class HealthResponse(BaseModel):

@@ -711,6 +711,69 @@ async def generate_reimagine(
     return await _call_and_parse(client, REIMAGINE_SYSTEM_PROMPT, prompt, max_tokens=8000)
 
 
+# ── Process Flow Charts ─────────────────────────────────────────────
+
+PROCESS_FLOW_SYSTEM_PROMPT = """You are a Process Flow Extraction Specialist. Analyze an organization's knowledge base and extract structured, step-by-step process flows suitable for flowchart visualization.
+
+For each distinct end-to-end process found in the analysis:
+1. PROCESS_ID: Unique lowercase slug identifier
+2. PROCESS_NAME: Human-readable name
+3. DESCRIPTION: 1-2 sentence summary of the process
+4. STEPS: Ordered list of steps with proper flow connections
+5. EXCEPTIONS: Related context intelligence items (tribal knowledge, exceptions, workarounds)
+
+STEP TYPES:
+- "start": The entry point of a process. Exactly ONE per process. Label should be "Start: <trigger>"
+- "end": The terminal point. At least ONE per process. Label should be "End: <outcome>"
+- "action": A concrete activity, task, or operation performed by someone/something
+- "decision": A branching point with a condition. MUST have branch_labels mapping each next_step ID to a label like "Yes"/"No" or "Approved"/"Rejected"
+- "exception": An error-handling or edge-case path. Should reference context_intelligence items
+
+RULES FOR STEPS:
+- Each process MUST start with exactly one "start" step and end with at least one "end" step
+- Every step MUST have next_steps (except "end" steps which have empty next_steps)
+- Decision steps MUST have exactly 2-3 next_steps with branch_labels for each
+- Action steps typically have 1 next_step
+- Exception steps can rejoin the main flow or lead to an "end" step
+- Max 15 steps per process to keep flowcharts readable
+- Step IDs must be unique within the process (lowercase slugs)
+- related_entities should reference knowledge_graph node IDs where applicable
+
+IDENTIFICATION RULES:
+- Extract 3-8 distinct processes — look for end-to-end workflows, not sub-tasks
+- Processes should represent complete business workflows from trigger to outcome
+- Include decision points where the process branches based on conditions
+- Include exception/error paths where tribal knowledge or workarounds apply
+- Sub-processes should be represented as action steps within their parent process, NOT as separate processes
+
+JSON output schema:
+{"process_flows":[{"process_id":"slug","process_name":"str","description":"str","steps":[{"id":"slug","label":"str","description":"str","step_type":"start|action|decision|end|exception","next_steps":["step-id"],"condition":"str (for decisions)","branch_labels":{"step-id":"Yes","step-id":"No"},"related_entities":["kg-node-id"]}],"exceptions":["context intelligence title"]}]}
+
+Respond ONLY with valid JSON, no markdown or commentary."""
+
+
+async def generate_process_flows(
+    current_analysis: dict,
+) -> dict:
+    """Generate process flow charts from the current analysis."""
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
+
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 120000:
+        analysis_json = analysis_json[:120000] + "\n... (truncated)"
+
+    prompt = (
+        f"## Current Analysis:\n{analysis_json}\n\n"
+        f"Extract all distinct end-to-end processes from this analysis as structured flowcharts. "
+        f"Each process should have a clear start, ordered steps, decision points with branches, "
+        f"exception paths where tribal knowledge or workarounds apply, and clear end states. "
+        f"Reference knowledge graph entities in related_entities where applicable. "
+        f"Return the COMPLETE process flows JSON."
+    )
+
+    return await _call_and_parse(client, PROCESS_FLOW_SYSTEM_PROMPT, prompt, max_tokens=10000)
+
+
 # ── Knowledge Synthesis ──────────────────────────────────────────────
 
 SYNTHESIS_SYSTEM_PROMPT = """You are a Knowledge Intelligence Synthesizer. Your job is to distill a comprehensive document analysis into a concise, executive-ready knowledge summary.
