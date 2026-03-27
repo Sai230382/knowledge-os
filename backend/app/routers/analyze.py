@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis
+from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis, generate_process_flows
 from app.services.url_service import download_file
 from app.services.job_service import create_and_run_job
 from app.schemas.responses import (
@@ -11,8 +11,9 @@ from app.schemas.responses import (
     BenchmarkRequest, BenchmarkResponse,
     ReimagineRequest, ReimagineResponse,
     SynthesisRequest, SynthesisResponse,
+    ProcessFlowRequest, ProcessFlowResponse,
 )
-from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput
+from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow
 
 router = APIRouter()
 
@@ -193,6 +194,17 @@ async def reimagine(request: ReimagineRequest):
     except Exception as e:
         raise HTTPException(500, f"Failed to generate reimagine scenarios: {str(e)}")
     return ReimagineResponse(reimagine=reimagine_output)
+
+
+@router.post("/api/process-flows", response_model=ProcessFlowResponse)
+async def process_flows(request: ProcessFlowRequest):
+    """Generate process flow charts from the current analysis."""
+    try:
+        data = await generate_process_flows(request.current_analysis)
+        flows = [ProcessFlow(**f) for f in data.get("process_flows", [])]
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate process flows: {str(e)}")
+    return ProcessFlowResponse(process_flows=flows)
 
 
 @router.post("/api/synthesize", response_model=SynthesisResponse)

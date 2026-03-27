@@ -69,6 +69,31 @@ class ContextGraphData(BaseModel):
     edges: list[ContextEdge] = []
 
 
+# --- Process Flow Charts ---
+
+class ProcessStep(BaseModel):
+    id: str = ""
+    label: str = ""
+    description: str = ""
+    step_type: str = "action"  # action | decision | start | end | exception
+    next_steps: list[str] = []  # IDs of next steps
+    condition: str = ""  # For decision nodes: the branch condition
+    branch_labels: dict[str, str] = {}  # next_step_id -> "Yes"/"No"/"Approved" etc.
+    related_entities: list[str] = []  # Knowledge graph node IDs
+
+
+class ProcessFlow(BaseModel):
+    process_id: str = ""
+    process_name: str = ""
+    description: str = ""
+    steps: list[ProcessStep] = []
+    exceptions: list[str] = []  # Context intelligence titles related to this process
+
+
+class ProcessFlowOutput(BaseModel):
+    process_flows: list[ProcessFlow] = []
+
+
 class AnalysisOutput(BaseModel):
     industry_patterns: list[IndustryPattern] = []
     context_intelligence: list[ContextIntelligence] = []
@@ -76,6 +101,7 @@ class AnalysisOutput(BaseModel):
     recommendations: list[Recommendation] = []
     knowledge_graph: KnowledgeGraphData = KnowledgeGraphData(nodes=[], edges=[])
     context_graph: ContextGraphData = ContextGraphData(nodes=[], edges=[])
+    process_flows: list[ProcessFlow] = []
 
 
 # --- Industry Benchmarks ---

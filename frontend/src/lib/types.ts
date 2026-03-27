@@ -134,6 +134,28 @@ export interface ReimagineOutput {
 }
 
 
+// --- Process Flow Charts ---
+
+export interface ProcessStep {
+  id: string;
+  label: string;
+  description: string;
+  step_type: "start" | "action" | "decision" | "end" | "exception";
+  next_steps: string[];
+  condition: string;
+  branch_labels: Record<string, string>;
+  related_entities: string[];
+}
+
+export interface ProcessFlow {
+  process_id: string;
+  process_name: string;
+  description: string;
+  steps: ProcessStep[];
+  exceptions: string[];
+}
+
+
 // --- Knowledge Synthesis ---
 
 export interface SynthesisSection {

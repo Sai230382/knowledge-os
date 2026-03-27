@@ -7,12 +7,13 @@ import ContextGraph from "../graphs/ContextGraph";
 import BenchmarkTab from "./BenchmarkTab";
 import ReimagineTab from "./ReimagineTab";
 import SynthesisTab from "./SynthesisTab";
+import ProcessFlowTab from "./ProcessFlowTab";
 
 interface ResultsTabsProps {
   analysis: AnalysisOutput;
 }
 
-type Tab = "synthesis" | "patterns" | "insights" | "knowledge" | "context" | "benchmarks" | "reimagine";
+type Tab = "synthesis" | "patterns" | "insights" | "knowledge" | "context" | "process-flow" | "benchmarks" | "reimagine";
 
 const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
   synthesis: {
@@ -35,6 +36,10 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
     icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
     description: "The HIDDEN intelligence layer — how tribal knowledge, exceptions, and undocumented patterns create informal dependencies. This is the context that powers autonomous decisions.",
   },
+  "process-flow": {
+    icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7",
+    description: "Process Flow — visual flowcharts of key processes showing steps, decision points, exception paths, and connections to knowledge graph entities. Download as HTML to share.",
+  },
   benchmarks: {
     icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
     description: "Industry benchmarks — compare your current processes against best-in-class practices. Get maturity scores and identify priority improvement areas.",
@@ -47,7 +52,7 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
 
 export default function ResultsTabs({ analysis }: ResultsTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("synthesis");
-  const [fullscreenGraph, setFullscreenGraph] = useState<"knowledge" | "context" | null>(null);
+  const [fullscreenGraph, setFullscreenGraph] = useState<"knowledge" | "context" | "process-flow" | null>(null);
   const [showInfo, setShowInfo] = useState(true);
 
   const gapCount = (analysis.gap_analysis || []).length;
@@ -59,24 +64,26 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
     { id: "insights", label: "Insights", count: gapCount + recsCount },
     { id: "knowledge", label: "Knowledge Graph" },
     { id: "context", label: "Context Graph" },
+    { id: "process-flow", label: "Process Flow" },
     { id: "benchmarks", label: "Benchmarks" },
     { id: "reimagine", label: "Reimagine" },
   ];
 
   // Fullscreen graph overlay
   if (fullscreenGraph) {
+    const fsLabels: Record<string, { title: string; desc: string }> = {
+      knowledge: { title: "Knowledge Graph", desc: "Formal entity map — official relationships and documented connections" },
+      context: { title: "Context Graph", desc: "Hidden intelligence layer — tribal knowledge, exceptions, and undocumented dependencies" },
+      "process-flow": { title: "Process Flow", desc: "Visual flowcharts of key processes — steps, decision points, and exception paths" },
+    };
+    const fsInfo = fsLabels[fullscreenGraph] || fsLabels.knowledge;
+
     return (
       <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950 flex flex-col">
         <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-white">
-              {fullscreenGraph === "knowledge" ? "Knowledge Graph" : "Context Graph"}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {fullscreenGraph === "knowledge"
-                ? "Formal entity map — official relationships and documented connections"
-                : "Hidden intelligence layer — tribal knowledge, exceptions, and undocumented dependencies"}
-            </p>
+            <h2 className="font-semibold text-slate-800 dark:text-white">{fsInfo.title}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{fsInfo.desc}</p>
           </div>
           <button
             onClick={() => setFullscreenGraph(null)}
@@ -89,10 +96,14 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           </button>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden">
-          {fullscreenGraph === "knowledge" ? (
+          {fullscreenGraph === "knowledge" && (
             <KnowledgeGraph data={analysis.knowledge_graph} analysis={analysis} fullscreen />
-          ) : (
+          )}
+          {fullscreenGraph === "context" && (
             <ContextGraph data={analysis.context_graph} knowledgeNodes={analysis.knowledge_graph.nodes} analysis={analysis} fullscreen />
+          )}
+          {fullscreenGraph === "process-flow" && (
+            <ProcessFlowTab analysis={analysis} fullscreen onToggleFullscreen={() => setFullscreenGraph(null)} />
           )}
         </div>
       </div>
@@ -199,6 +210,15 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           <div className="flex-1 min-h-0 px-4 pb-3">
             <ContextGraph data={analysis.context_graph} knowledgeNodes={analysis.knowledge_graph.nodes} analysis={analysis} />
           </div>
+        </div>
+      )}
+
+      {activeTab === "process-flow" && (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <ProcessFlowTab
+            analysis={analysis}
+            onToggleFullscreen={() => setFullscreenGraph("process-flow")}
+          />
         </div>
       )}
 
