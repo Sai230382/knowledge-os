@@ -6,6 +6,7 @@ import GraphControls from "./GraphControls";
 import NodeDetailPanel from "./NodeDetailPanel";
 import { GraphData, GraphNode, AnalysisOutput } from "@/lib/types";
 import { GRAPH_CONFIG, getNodeColor, getNodeLabel } from "@/lib/constants";
+import { exportGraphHtml } from "@/lib/exportGraphHtml";
 
 interface KnowledgeGraphProps {
   data: GraphData;
@@ -113,6 +114,17 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
     });
   }, []);
 
+  const handleExportHtml = useCallback(() => {
+    exportGraphHtml({
+      title: "Knowledge Graph",
+      graphType: "knowledge",
+      nodes: sanitizedData.nodes,
+      edges: sanitizedData.edges,
+      contextIntelligence: analysis.context_intelligence || [],
+      entityIndicators,
+    });
+  }, [sanitizedData, analysis.context_intelligence, entityIndicators]);
+
   useForceGraph(svgRef, sanitizedData, dimensions, GRAPH_CONFIG, {
     onNodeClick: handleNodeClick,
     entityIndicators,
@@ -177,7 +189,7 @@ export default function KnowledgeGraph({ data, analysis, fullscreen }: Knowledge
 
       {/* Graph area — panel overlays on top so graph container never resizes */}
       <div ref={containerRef} className="relative flex-1 min-h-0 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-lg overflow-hidden">
-        <GraphControls svgRef={svgRef} />
+        <GraphControls svgRef={svgRef} onExportHtml={handleExportHtml} />
         <svg
           ref={svgRef}
           width={dimensions.width}

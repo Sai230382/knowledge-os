@@ -6,6 +6,7 @@ import GraphControls from "./GraphControls";
 import NodeDetailPanel from "./NodeDetailPanel";
 import { GraphData, GraphNode, GraphEdge, ContextEdge, AnalysisOutput } from "@/lib/types";
 import { CONTEXT_GRAPH_CONFIG, getNodeColor, getNodeLabel, CONTEXT_TYPE_COLORS, CONTEXT_TYPE_LABELS } from "@/lib/constants";
+import { exportGraphHtml } from "@/lib/exportGraphHtml";
 
 type HopLevel = "all" | 1 | 2;
 
@@ -147,6 +148,16 @@ export default function ContextGraph({ data, knowledgeNodes, analysis, fullscree
     return CONTEXT_TYPE_COLORS[ctxType] || "#94A3B8";
   }, []);
 
+  const handleExportHtml = useCallback(() => {
+    exportGraphHtml({
+      title: "Context Graph",
+      graphType: "context",
+      nodes: filteredData.nodes,
+      edges: filteredData.edges,
+      contextIntelligence: analysis.context_intelligence || [],
+    });
+  }, [filteredData, analysis.context_intelligence]);
+
   useForceGraph(svgRef, filteredData, dimensions, CONTEXT_GRAPH_CONFIG, {
     onNodeClick: handleNodeClick,
     edgeLabelMaxLength: 0, // Hide edge labels — details in panel
@@ -243,7 +254,7 @@ export default function ContextGraph({ data, knowledgeNodes, analysis, fullscree
 
       {/* Graph area — panel overlays on top so graph container never resizes */}
       <div ref={containerRef} className="relative flex-1 min-h-0 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-lg overflow-hidden">
-        <GraphControls svgRef={svgRef} />
+        <GraphControls svgRef={svgRef} onExportHtml={handleExportHtml} />
         <svg
           ref={svgRef}
           width={dimensions.width}
