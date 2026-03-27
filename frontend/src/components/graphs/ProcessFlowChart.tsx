@@ -311,20 +311,18 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
         // Decision text — wrap into 2 lines
         const label = node.step.condition || node.step.label;
         const lines = wrapText(label, 20);
-        const textEl = nodeGroup
-          .append("text")
-          .attr("x", node.x)
-          .attr("text-anchor", "middle")
-          .attr("font-size", "11px")
-          .attr("font-weight", "600")
-          .attr("fill", colors.text)
-          .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif");
-
+        const startY = lines.length === 1 ? node.y + 4 : node.y - 6;
         lines.forEach((line, i) => {
-          textEl
-            .append("tspan")
+          nodeGroup
+            .append("text")
             .attr("x", node.x)
-            .attr("dy", i === 0 ? (lines.length === 1 ? "0.35em" : "-0.35em") : "1.2em")
+            .attr("y", startY + i * 14)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .attr("font-size", "11px")
+            .attr("font-weight", "600")
+            .attr("fill", colors.text)
+            .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif")
             .text(line);
         });
       } else {
@@ -347,20 +345,18 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
         // Label text — wrap into 2 lines for longer labels
         const label = node.step.label;
         const lines = wrapText(label, 32);
-        const textEl = nodeGroup
-          .append("text")
-          .attr("x", node.x)
-          .attr("text-anchor", "middle")
-          .attr("font-size", "13px")
-          .attr("font-weight", "600")
-          .attr("fill", colors.text)
-          .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif");
-
+        const startY = lines.length === 1 ? node.y + 4 : node.y - 6;
         lines.forEach((line, i) => {
-          textEl
-            .append("tspan")
+          nodeGroup
+            .append("text")
             .attr("x", node.x)
-            .attr("dy", i === 0 ? (lines.length === 1 ? "0.35em" : "-0.35em") : "1.3em")
+            .attr("y", startY + i * 16)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .attr("font-size", "13px")
+            .attr("font-weight", "600")
+            .attr("fill", colors.text)
+            .attr("font-family", "-apple-system, BlinkMacSystemFont, sans-serif")
             .text(line);
         });
 
