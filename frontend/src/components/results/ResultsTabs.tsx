@@ -38,7 +38,7 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
   },
   "process-flow": {
     icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7",
-    description: "Process Flow — visual flowcharts of key processes showing steps, decision points, exception paths, and connections to knowledge graph entities. Download as HTML to share.",
+    description: "Process Flow — visual flowcharts of key processes with side-by-side As-Is vs AI-powered To-Be comparison. Download as HTML to share.",
   },
   benchmarks: {
     icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
@@ -50,9 +50,20 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
   },
 };
 
+const FS_LABELS: Record<Tab, { title: string; desc: string }> = {
+  synthesis: { title: "Knowledge Synthesis", desc: "Executive summary — key risks, quick wins, and strategic recommendations" },
+  patterns: { title: "Patterns & Intelligence", desc: "Industry patterns and context intelligence findings" },
+  insights: { title: "Insights", desc: "Gap analysis and actionable recommendations" },
+  knowledge: { title: "Knowledge Graph", desc: "Formal entity map — official relationships and documented connections" },
+  context: { title: "Context Graph", desc: "Hidden intelligence layer — tribal knowledge, exceptions, and undocumented dependencies" },
+  "process-flow": { title: "Process Flow", desc: "Visual flowcharts of key processes — steps, decision points, and exception paths" },
+  benchmarks: { title: "Industry Benchmarks", desc: "Compare your processes against best-in-class practices" },
+  reimagine: { title: "Reimagine Lab", desc: "AI transformation scenarios for your current processes" },
+};
+
 export default function ResultsTabs({ analysis }: ResultsTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("synthesis");
-  const [fullscreenGraph, setFullscreenGraph] = useState<"knowledge" | "context" | "process-flow" | null>(null);
+  const [fullscreenTab, setFullscreenTab] = useState<Tab | null>(null);
   const [showInfo, setShowInfo] = useState(true);
 
   const gapCount = (analysis.gap_analysis || []).length;
@@ -69,14 +80,9 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
     { id: "reimagine", label: "Reimagine" },
   ];
 
-  // Fullscreen graph overlay
-  if (fullscreenGraph) {
-    const fsLabels: Record<string, { title: string; desc: string }> = {
-      knowledge: { title: "Knowledge Graph", desc: "Formal entity map — official relationships and documented connections" },
-      context: { title: "Context Graph", desc: "Hidden intelligence layer — tribal knowledge, exceptions, and undocumented dependencies" },
-      "process-flow": { title: "Process Flow", desc: "Visual flowcharts of key processes — steps, decision points, and exception paths" },
-    };
-    const fsInfo = fsLabels[fullscreenGraph] || fsLabels.knowledge;
+  // Fullscreen overlay — works for ALL tabs
+  if (fullscreenTab) {
+    const fsInfo = FS_LABELS[fullscreenTab];
 
     return (
       <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950 flex flex-col">
@@ -86,7 +92,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
             <p className="text-xs text-slate-500 dark:text-slate-400">{fsInfo.desc}</p>
           </div>
           <button
-            onClick={() => setFullscreenGraph(null)}
+            onClick={() => setFullscreenTab(null)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,14 +102,39 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           </button>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden">
-          {fullscreenGraph === "knowledge" && (
+          {fullscreenTab === "synthesis" && (
+            <div className="h-full overflow-auto p-4">
+              <SynthesisTab analysis={analysis} />
+            </div>
+          )}
+          {fullscreenTab === "patterns" && (
+            <div className="h-full overflow-auto p-4">
+              <PatternCards analysis={analysis} />
+            </div>
+          )}
+          {fullscreenTab === "insights" && (
+            <div className="h-full overflow-auto p-4">
+              <InsightsView analysis={analysis} />
+            </div>
+          )}
+          {fullscreenTab === "knowledge" && (
             <KnowledgeGraph data={analysis.knowledge_graph} analysis={analysis} fullscreen />
           )}
-          {fullscreenGraph === "context" && (
+          {fullscreenTab === "context" && (
             <ContextGraph data={analysis.context_graph} knowledgeNodes={analysis.knowledge_graph.nodes} analysis={analysis} fullscreen />
           )}
-          {fullscreenGraph === "process-flow" && (
-            <ProcessFlowTab analysis={analysis} fullscreen onToggleFullscreen={() => setFullscreenGraph(null)} />
+          {fullscreenTab === "process-flow" && (
+            <ProcessFlowTab analysis={analysis} fullscreen onToggleFullscreen={() => setFullscreenTab(null)} />
+          )}
+          {fullscreenTab === "benchmarks" && (
+            <div className="h-full overflow-auto p-4">
+              <BenchmarkTab analysis={analysis} />
+            </div>
+          )}
+          {fullscreenTab === "reimagine" && (
+            <div className="h-full overflow-auto p-4">
+              <ReimagineTab analysis={analysis} />
+            </div>
           )}
         </div>
       </div>
@@ -133,7 +164,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
         ))}
       </div>
 
-      {/* Tab description banner */}
+      {/* Tab description banner + fullscreen button */}
       {showInfo && (
         <div className="flex items-start gap-2.5 px-4 py-2.5 bg-blue-50/70 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/50 flex-shrink-0">
           <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,6 +173,17 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed flex-1">
             {TAB_INFO[activeTab].description}
           </p>
+          {/* Fullscreen button in info bar */}
+          <button
+            onClick={() => setFullscreenTab(activeTab)}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 rounded transition-colors flex-shrink-0"
+            title="Open in fullscreen"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+            Fullscreen
+          </button>
           <button
             onClick={() => setShowInfo(false)}
             className="text-blue-400 dark:text-blue-500 hover:text-blue-600 dark:hover:text-blue-300 flex-shrink-0 mt-0.5"
@@ -179,7 +221,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="flex justify-end px-4 pt-2 pb-1 flex-shrink-0">
             <button
-              onClick={() => setFullscreenGraph("knowledge")}
+              onClick={() => setFullscreenTab("knowledge")}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-400 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,7 +240,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="flex justify-end px-4 pt-2 pb-1 flex-shrink-0">
             <button
-              onClick={() => setFullscreenGraph("context")}
+              onClick={() => setFullscreenTab("context")}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-400 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,7 +259,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <ProcessFlowTab
             analysis={analysis}
-            onToggleFullscreen={() => setFullscreenGraph("process-flow")}
+            onToggleFullscreen={() => setFullscreenTab("process-flow")}
           />
         </div>
       )}

@@ -156,6 +156,23 @@ export interface ProcessFlow {
 }
 
 
+// --- To-Be Process Flows (AI-transformed) ---
+
+export interface ToBeProcessStep extends ProcessStep {
+  change_type: "unchanged" | "new" | "modified" | "eliminated";
+}
+
+export interface ToBeProcessFlow {
+  process_id: string;
+  process_name: string;
+  description: string;
+  steps: ToBeProcessStep[];
+  exceptions: string[];
+  transformation_summary: string;
+  ai_technologies_used: string[];
+}
+
+
 // --- Knowledge Synthesis ---
 
 export interface SynthesisSection {

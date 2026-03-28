@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
-import { AnalysisOutput, ProcessFlow, ContextIntelligence, GapAnalysis } from "@/lib/types";
-import { generateProcessFlows } from "@/lib/api";
+import { AnalysisOutput, ProcessFlow, ToBeProcessFlow, ReimagineOutput, ContextIntelligence, GapAnalysis } from "@/lib/types";
+import { generateProcessFlows, generateToBeProcessFlows, generateReimagine } from "@/lib/api";
 import ProcessFlowChart from "../graphs/ProcessFlowChart";
 import { generateProcessFlowHTML } from "@/lib/processFlowHtmlExport";
 
@@ -13,39 +13,30 @@ interface ProcessFlowTabProps {
 
 /** Find context intelligence and gaps related to a specific process flow */
 function getProcessInsights(flow: ProcessFlow, analysis: AnalysisOutput) {
-  // Collect all entity IDs referenced in this flow's steps
   const flowEntityIds = new Set<string>();
   flow.steps.forEach((step) => {
     step.related_entities.forEach((id) => flowEntityIds.add(id));
   });
 
-  // Also match by process name keywords
   const nameWords = flow.process_name.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
-
   const matchesText = (text: string) => {
     const lower = text.toLowerCase();
     return nameWords.some((w) => lower.includes(w));
   };
 
-  // Find related context intelligence
   const relatedIntel = (analysis.context_intelligence || []).filter((ci) => {
-    // Match by entity overlap
     if (ci.related_entities.some((e) => flowEntityIds.has(e))) return true;
-    // Match by exception titles in the flow
     if (flow.exceptions.some((ex) => ci.title.toLowerCase().includes(ex.toLowerCase()) || ex.toLowerCase().includes(ci.title.toLowerCase()))) return true;
-    // Match by name keywords
     if (matchesText(ci.title) || matchesText(ci.description)) return true;
     return false;
   });
 
-  // Find related gaps
   const relatedGaps = (analysis.gap_analysis || []).filter((gap) => {
     if (matchesText(gap.title) || matchesText(gap.description)) return true;
     if (matchesText(gap.recommendation)) return true;
     return false;
   });
 
-  // Find related recommendations
   const relatedRecs = (analysis.recommendations || []).filter((rec) => {
     if (rec.related_entities.some((e) => flowEntityIds.has(e))) return true;
     if (matchesText(rec.title) || matchesText(rec.description)) return true;
@@ -71,10 +62,14 @@ const RISK_COLORS: Record<string, string> = {
 
 export default function ProcessFlowTab({ analysis, fullscreen, onToggleFullscreen }: ProcessFlowTabProps) {
   const [processFlows, setProcessFlows] = useState<ProcessFlow[] | null>(null);
+  const [toBeFlows, setToBeFlows] = useState<ToBeProcessFlow[] | null>(null);
+  const [reimagineData, setReimagineData] = useState<ReimagineOutput | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingToBe, setIsLoadingToBe] = useState(false);
   const [error, setError] = useState("");
-  const [showInsights, setShowInsights] = useState(true);
+  const [showInsights, setShowInsights] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -83,10 +78,42 @@ export default function ProcessFlowTab({ analysis, fullscreen, onToggleFullscree
       const result = await generateProcessFlows(analysis);
       setProcessFlows(result);
       setSelectedIndex(0);
+      setToBeFlows(null);
+      setShowComparison(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate process flows");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateToBe = async () => {
+    if (!processFlows) return;
+    setIsLoadingToBe(true);
+    setError("");
+    try {
+      // First get reimagine data if we don't have it
+      let reimagine = reimagineData;
+      if (!reimagine) {
+        try {
+          reimagine = await generateReimagine(analysis);
+          setReimagineData(reimagine);
+        } catch {
+          // Continue without reimagine data
+        }
+      }
+
+      const result = await generateToBeProcessFlows(
+        analysis,
+        processFlows,
+        reimagine || undefined,
+      );
+      setToBeFlows(result);
+      setShowComparison(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate To-Be flows");
+    } finally {
+      setIsLoadingToBe(false);
     }
   };
 
@@ -106,6 +133,7 @@ export default function ProcessFlowTab({ analysis, fullscreen, onToggleFullscree
   };
 
   const currentFlow = processFlows?.[selectedIndex] || null;
+  const currentToBe = toBeFlows?.find((f) => f.process_id === currentFlow?.process_id) || toBeFlows?.[selectedIndex] || null;
 
   const insights = useMemo(() => {
     if (!currentFlow) return null;
@@ -162,7 +190,7 @@ export default function ProcessFlowTab({ analysis, fullscreen, onToggleFullscree
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
             Each process includes decision points, exception paths, and connections to knowledge graph entities.
-            You can download each flowchart as a standalone HTML file to share with your team.
+            You can also generate AI-powered To-Be flows for side-by-side comparison.
           </p>
           <button
             onClick={handleGenerate}
@@ -210,6 +238,45 @@ export default function ProcessFlowTab({ analysis, fullscreen, onToggleFullscree
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Compare / To-Be toggle */}
+          {!toBeFlows ? (
+            <button
+              onClick={handleGenerateToBe}
+              disabled={isLoadingToBe}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors disabled:opacity-50"
+              title="Generate AI-transformed To-Be flows for comparison"
+            >
+              {isLoadingToBe ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                  Generating To-Be...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Compare As-Is vs To-Be
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowComparison(!showComparison)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                showComparison
+                  ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800"
+                  : "text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+              }`}
+              title="Toggle side-by-side comparison"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+              </svg>
+              {showComparison ? "Side-by-Side" : "Show As-Is Only"}
+            </button>
+          )}
+
           {/* Insights toggle */}
           <button
             onClick={() => setShowInsights(!showInsights)}
@@ -273,12 +340,61 @@ export default function ProcessFlowTab({ analysis, fullscreen, onToggleFullscree
         </div>
       </div>
 
-      {/* Main content: chart + optional insights panel */}
-      <div className="flex-1 min-h-0 flex overflow-hidden">
-        {/* Chart area — takes remaining space */}
-        <div className="flex-1 min-w-0 min-h-0">
-          <ProcessFlowChart flow={currentFlow!} fullscreen={fullscreen} />
+      {/* Transformation summary banner */}
+      {showComparison && currentToBe && currentToBe.transformation_summary && (
+        <div className="px-4 py-2 bg-emerald-50/80 dark:bg-emerald-950/30 border-b border-emerald-200 dark:border-emerald-800 shrink-0">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <div>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">{currentToBe.transformation_summary}</p>
+              {currentToBe.ai_technologies_used.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {currentToBe.ai_technologies_used.map((tech, i) => (
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Main content: side-by-side charts + optional insights panel */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {showComparison && currentToBe ? (
+          /* Side-by-side comparison */
+          <div className="flex-1 min-w-0 min-h-0 flex">
+            {/* Left: As-Is */}
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col border-r border-slate-200 dark:border-slate-700">
+              <div className="px-3 py-1.5 bg-blue-50/50 dark:bg-blue-950/30 border-b border-slate-200 dark:border-slate-700 shrink-0">
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">AS-IS</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-2">Current Process</span>
+              </div>
+              <div className="flex-1 min-h-0">
+                <ProcessFlowChart flow={currentFlow!} fullscreen={fullscreen} />
+              </div>
+            </div>
+            {/* Right: To-Be */}
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+              <div className="px-3 py-1.5 bg-emerald-50/50 dark:bg-emerald-950/30 border-b border-slate-200 dark:border-slate-700 shrink-0">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">TO-BE</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-2">AI-Transformed</span>
+              </div>
+              <div className="flex-1 min-h-0">
+                <ProcessFlowChart flow={currentToBe as unknown as ProcessFlow} fullscreen={fullscreen} toBeMode />
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Single chart view */
+          <div className="flex-1 min-w-0 min-h-0">
+            <ProcessFlowChart flow={currentFlow!} fullscreen={fullscreen} />
+          </div>
+        )}
 
         {/* Insights side panel */}
         {showInsights && insights && insightCount > 0 && (

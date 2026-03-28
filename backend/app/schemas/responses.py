@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlowOutput, ProcessFlow
+from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlowOutput, ProcessFlow, ToBeProcessFlow
 
 
 class FileMetadata(BaseModel):
@@ -72,6 +72,7 @@ class ReimagineResponse(BaseModel):
 class SynthesisRequest(BaseModel):
     current_analysis: dict
     query: Optional[str] = None  # optional user question to address in the synthesis
+    process_flows: Optional[list[dict]] = None  # optional process flows to include in synthesis
 
 
 class SynthesisResponse(BaseModel):
@@ -84,6 +85,16 @@ class ProcessFlowRequest(BaseModel):
 
 class ProcessFlowResponse(BaseModel):
     process_flows: list[ProcessFlow]
+
+
+class ToBeProcessFlowRequest(BaseModel):
+    current_analysis: dict
+    as_is_flows: list[dict]  # The existing process flows
+    reimagine_data: Optional[dict] = None  # Optional reimagine output
+
+
+class ToBeProcessFlowResponse(BaseModel):
+    process_flows: list[ToBeProcessFlow]
 
 
 class HealthResponse(BaseModel):

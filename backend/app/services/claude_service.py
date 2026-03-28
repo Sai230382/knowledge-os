@@ -774,6 +774,72 @@ async def generate_process_flows(
     return await _call_and_parse(client, PROCESS_FLOW_SYSTEM_PROMPT, prompt, max_tokens=10000)
 
 
+# ── To-Be Process Flows (AI-Transformed) ─────────────────────────────
+
+TO_BE_PROCESS_FLOW_SYSTEM_PROMPT = """You are an AI Process Transformation Architect. Given an As-Is process flow and optional AI transformation insights, generate the optimized To-Be process flow showing how AI, Agentic AI, and intelligent automation transform the process.
+
+For EACH As-Is process provided, generate the corresponding To-Be flow with these rules:
+
+CHANGE_TYPE for each step:
+- "unchanged": Step exists in As-Is and remains the same in To-Be
+- "new": A brand-new AI-powered step that doesn't exist in As-Is (e.g., AI classification, predictive routing, automated validation)
+- "modified": Step exists in As-Is but is enhanced/modified in To-Be (e.g., manual review → AI-assisted review)
+- "eliminated": Step from As-Is that is removed in To-Be (include it with empty next_steps so it shows as faded/strikethrough)
+
+RULES:
+- Keep the same process_id and process_name as the As-Is flow
+- The To-Be flow should show a realistic AI transformation — not everything changes
+- Typically 30-60% of steps change (new, modified, or eliminated)
+- New AI steps should reference specific AI technologies (NLP, ML, Computer Vision, Agentic AI, LLM, RPA, etc.)
+- Eliminated steps should still appear in the steps array with change_type: "eliminated" and empty next_steps
+- Decision points may become automated classifiers
+- Manual reviews may become AI-assisted with human-in-the-loop
+- Exception handling may become predictive prevention
+- Include transformation_summary: 2-3 sentences describing the key transformation
+- Include ai_technologies_used: list of AI technologies applied
+- Max 18 steps per process (may add a few new ones beyond the original)
+
+JSON output schema:
+{"process_flows":[{"process_id":"slug","process_name":"str","description":"str","transformation_summary":"str","ai_technologies_used":["str"],"steps":[{"id":"slug","label":"str","description":"str","step_type":"start|action|decision|end|exception","next_steps":["step-id"],"condition":"str","branch_labels":{"step-id":"label"},"related_entities":[],"change_type":"unchanged|new|modified|eliminated"}],"exceptions":["str"]}]}
+
+Respond ONLY with valid JSON, no markdown or commentary."""
+
+
+async def generate_tobe_process_flows(
+    current_analysis: dict,
+    as_is_flows: list[dict],
+    reimagine_data: dict | None = None,
+) -> dict:
+    """Generate To-Be (AI-transformed) process flows from As-Is flows."""
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
+
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 80000:
+        analysis_json = analysis_json[:80000] + "\n... (truncated)"
+
+    as_is_json = json.dumps(as_is_flows, indent=1)
+
+    parts = [
+        f"## Current Analysis Context:\n{analysis_json}\n",
+        f"\n## As-Is Process Flows (transform these):\n{as_is_json}\n",
+    ]
+
+    if reimagine_data:
+        reimagine_json = json.dumps(reimagine_data, indent=1)
+        if len(reimagine_json) > 30000:
+            reimagine_json = reimagine_json[:30000] + "\n... (truncated)"
+        parts.append(f"\n## AI Transformation Insights (use these to inform To-Be):\n{reimagine_json}\n")
+
+    parts.append(
+        "\nTransform each As-Is process flow into an AI-powered To-Be flow. "
+        "Mark each step with change_type: unchanged, new, modified, or eliminated. "
+        "New AI steps should be specific (e.g., 'AI Document Classifier' not just 'AI Step'). "
+        "Return the COMPLETE to-be process flows JSON."
+    )
+
+    return await _call_and_parse(client, TO_BE_PROCESS_FLOW_SYSTEM_PROMPT, "\n".join(parts), max_tokens=12000)
+
+
 # ── Knowledge Synthesis ──────────────────────────────────────────────
 
 SYNTHESIS_SYSTEM_PROMPT = """You are a Knowledge Intelligence Synthesizer. Your job is to distill a comprehensive document analysis into a concise, executive-ready knowledge summary.
@@ -793,7 +859,8 @@ RULES:
 - Write in clear, direct business language — no jargon
 - Be SPECIFIC — reference actual processes, systems, and entities from the analysis
 - Sections should cover: Key Processes, Hidden Knowledge, Critical Gaps, Technology Landscape, and Organizational Patterns
-- Max 6 sections
+- If process flow data is provided, include a section summarizing the key process flows, their complexity, decision points, and exception paths
+- Max 7 sections
 - Each risk, quick win, and recommendation should be one concise sentence
 - If the user included a question, address it directly in the executive summary
 - Respond ONLY with valid JSON, no markdown or commentary"""
@@ -802,6 +869,7 @@ RULES:
 async def generate_synthesis(
     current_analysis: dict,
     query: str | None = None,
+    process_flows: list[dict] | None = None,
 ) -> dict:
     """Generate a knowledge synthesis from the full analysis."""
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
@@ -811,10 +879,16 @@ async def generate_synthesis(
         analysis_json = analysis_json[:120000] + "\n... (truncated)"
 
     parts = [f"## Full Analysis Data:\n{analysis_json}\n"]
+    if process_flows:
+        pf_json = json.dumps(process_flows, indent=1)
+        if len(pf_json) > 30000:
+            pf_json = pf_json[:30000] + "\n... (truncated)"
+        parts.append(f"\n## Process Flows Extracted:\n{pf_json}\n")
     if query and query.strip():
         parts.append(f"\n## User Question to Address:\n{query}\n")
     parts.append(
         "\nSynthesize the key findings into a concise executive knowledge summary. "
+        "If process flow data is provided, include a section about key processes. "
         "Return the COMPLETE synthesis JSON."
     )
 

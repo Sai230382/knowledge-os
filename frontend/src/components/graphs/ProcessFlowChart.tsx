@@ -6,6 +6,7 @@ import { ProcessFlow, ProcessStep } from "@/lib/types";
 interface ProcessFlowChartProps {
   flow: ProcessFlow;
   fullscreen?: boolean;
+  toBeMode?: boolean; // Enable change_type color coding
 }
 
 // Layout constants — generous sizing for readability
@@ -23,6 +24,14 @@ const STEP_COLORS: Record<string, { fill: string; stroke: string; text: string }
   action: { fill: "#EFF6FF", stroke: "#2563EB", text: "#1E40AF" },
   decision: { fill: "#FFFBEB", stroke: "#D97706", text: "#92400E" },
   exception: { fill: "#FEF2F2", stroke: "#EF4444", text: "#991B1B" },
+};
+
+// To-Be change_type color overrides
+const CHANGE_COLORS: Record<string, { fill: string; stroke: string; text: string; glowColor?: string }> = {
+  new: { fill: "#ECFDF5", stroke: "#10B981", text: "#065F46", glowColor: "#10B981" },        // Teal/green for new AI steps
+  modified: { fill: "#FFF7ED", stroke: "#F59E0B", text: "#92400E", glowColor: "#F59E0B" },    // Amber glow for modified
+  eliminated: { fill: "#F8FAFC", stroke: "#CBD5E1", text: "#94A3B8" },                         // Faded gray for eliminated
+  unchanged: { fill: "#EFF6FF", stroke: "#2563EB", text: "#1E40AF" },                          // Normal blue
 };
 
 interface LayoutNode {
@@ -153,7 +162,7 @@ function computeLayout(flow: ProcessFlow): { nodes: LayoutNode[]; edges: LayoutE
   return { nodes: layoutNodes, edges: layoutEdges };
 }
 
-export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
+export default function ProcessFlowChart({ flow, toBeMode }: ProcessFlowChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedStep, setSelectedStep] = useState<ProcessStep | null>(null);
@@ -183,6 +192,14 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
     // Drop shadow filter
     const filter = defs.append("filter").attr("id", "shadow").attr("x", "-10%").attr("y", "-10%").attr("width", "120%").attr("height", "130%");
     filter.append("feDropShadow").attr("dx", 0).attr("dy", 2).attr("stdDeviation", 3).attr("flood-opacity", 0.08);
+
+    // Glow filter for new/modified To-Be steps
+    if (toBeMode) {
+      ["#10B981", "#F59E0B"].forEach((color, i) => {
+        const glow = defs.append("filter").attr("id", `glow-${i}`).attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
+        glow.append("feDropShadow").attr("dx", 0).attr("dy", 0).attr("stdDeviation", 4).attr("flood-color", color).attr("flood-opacity", 0.4);
+      });
+    }
 
     // Arrow markers
     [
@@ -282,11 +299,18 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
 
     // Draw nodes
     layout.nodes.forEach((node) => {
-      const colors = STEP_COLORS[node.step.step_type] || STEP_COLORS.action;
+      const changeType = (node.step as any).change_type as string | undefined;
+      const colors = toBeMode && changeType && CHANGE_COLORS[changeType]
+        ? CHANGE_COLORS[changeType]
+        : (STEP_COLORS[node.step.step_type] || STEP_COLORS.action);
+      const glowFilter = toBeMode && changeType === "new" ? "url(#glow-0)"
+        : toBeMode && changeType === "modified" ? "url(#glow-1)"
+        : "url(#shadow)";
       const nodeGroup = g
         .append("g")
         .attr("cursor", "pointer")
-        .attr("filter", "url(#shadow)")
+        .attr("filter", glowFilter)
+        .attr("opacity", toBeMode && changeType === "eliminated" ? 0.4 : 1)
         .on("click", () => handleStepClick(node.step));
 
       if (node.step.step_type === "decision") {
@@ -329,6 +353,7 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
         // Rectangle
         const rx = node.step.step_type === "start" || node.step.step_type === "end" ? 28 : 10;
         const isException = node.step.step_type === "exception";
+        const isEliminated = toBeMode && changeType === "eliminated";
 
         nodeGroup
           .append("rect")
@@ -339,8 +364,8 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
           .attr("rx", rx)
           .attr("fill", colors.fill)
           .attr("stroke", colors.stroke)
-          .attr("stroke-width", 2)
-          .attr("stroke-dasharray", isException ? "6,3" : "none");
+          .attr("stroke-width", isEliminated ? 1.5 : 2)
+          .attr("stroke-dasharray", isException || isEliminated ? "6,3" : "none");
 
         // Label text — wrap into 2 lines for longer labels
         const label = node.step.label;
@@ -371,7 +396,7 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
         }
       }
     });
-  }, [layout, handleStepClick]);
+  }, [layout, handleStepClick, toBeMode]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-white dark:bg-slate-950 overflow-hidden">
@@ -430,15 +455,34 @@ export default function ProcessFlowChart({ flow }: ProcessFlowChartProps) {
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 flex items-center gap-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 z-10">
-        {Object.entries(STEP_COLORS).map(([type, colors]) => (
-          <div key={type} className="flex items-center gap-1.5">
-            <div
-              className="w-3 h-3 rounded-sm border"
-              style={{ backgroundColor: colors.fill, borderColor: colors.stroke }}
-            />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize font-medium">{type}</span>
-          </div>
-        ))}
+        {toBeMode ? (
+          <>
+            {Object.entries(CHANGE_COLORS).map(([type, colors]) => (
+              <div key={type} className="flex items-center gap-1.5">
+                <div
+                  className="w-3 h-3 rounded-sm border"
+                  style={{
+                    backgroundColor: colors.fill,
+                    borderColor: colors.stroke,
+                    opacity: type === "eliminated" ? 0.5 : 1,
+                    borderStyle: type === "eliminated" ? "dashed" : "solid",
+                  }}
+                />
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize font-medium">{type}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          Object.entries(STEP_COLORS).map(([type, colors]) => (
+            <div key={type} className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded-sm border"
+                style={{ backgroundColor: colors.fill, borderColor: colors.stroke }}
+              />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize font-medium">{type}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
