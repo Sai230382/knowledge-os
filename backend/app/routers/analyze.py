@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis, generate_process_flows
+from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis, generate_process_flows, generate_tobe_process_flows
 from app.services.url_service import download_file
 from app.services.job_service import create_and_run_job
 from app.schemas.responses import (
@@ -12,8 +12,9 @@ from app.schemas.responses import (
     ReimagineRequest, ReimagineResponse,
     SynthesisRequest, SynthesisResponse,
     ProcessFlowRequest, ProcessFlowResponse,
+    ToBeProcessFlowRequest, ToBeProcessFlowResponse,
 )
-from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow
+from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow, ToBeProcessFlow
 
 router = APIRouter()
 
@@ -207,6 +208,21 @@ async def process_flows(request: ProcessFlowRequest):
     return ProcessFlowResponse(process_flows=flows)
 
 
+@router.post("/api/process-flows/to-be", response_model=ToBeProcessFlowResponse)
+async def tobe_process_flows(request: ToBeProcessFlowRequest):
+    """Generate AI-transformed To-Be process flows from As-Is flows."""
+    try:
+        data = await generate_tobe_process_flows(
+            request.current_analysis,
+            request.as_is_flows,
+            request.reimagine_data,
+        )
+        flows = [ToBeProcessFlow(**f) for f in data.get("process_flows", [])]
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate To-Be process flows: {str(e)}")
+    return ToBeProcessFlowResponse(process_flows=flows)
+
+
 @router.post("/api/synthesize", response_model=SynthesisResponse)
 async def synthesize(request: SynthesisRequest):
     """Generate a knowledge synthesis from the full analysis."""
@@ -214,6 +230,7 @@ async def synthesize(request: SynthesisRequest):
         data = await generate_synthesis(
             request.current_analysis,
             request.query,
+            request.process_flows,
         )
         synthesis_output = SynthesisOutput(**data)
     except Exception as e:

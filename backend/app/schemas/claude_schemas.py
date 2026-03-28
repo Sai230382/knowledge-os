@@ -94,6 +94,34 @@ class ProcessFlowOutput(BaseModel):
     process_flows: list[ProcessFlow] = []
 
 
+# --- To-Be Process Flows (AI-transformed) ---
+
+class ToBeProcessStep(BaseModel):
+    id: str = ""
+    label: str = ""
+    description: str = ""
+    step_type: str = "action"
+    next_steps: list[str] = []
+    condition: str = ""
+    branch_labels: dict[str, str] = {}
+    related_entities: list[str] = []
+    change_type: str = "unchanged"  # unchanged | new | modified | eliminated
+
+
+class ToBeProcessFlow(BaseModel):
+    process_id: str = ""
+    process_name: str = ""
+    description: str = ""
+    steps: list[ToBeProcessStep] = []
+    exceptions: list[str] = []
+    transformation_summary: str = ""
+    ai_technologies_used: list[str] = []
+
+
+class ToBeProcessFlowOutput(BaseModel):
+    process_flows: list[ToBeProcessFlow] = []
+
+
 class AnalysisOutput(BaseModel):
     industry_patterns: list[IndustryPattern] = []
     context_intelligence: list[ContextIntelligence] = []

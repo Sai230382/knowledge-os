@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow } from "./types";
+import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow, ToBeProcessFlow } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
@@ -128,10 +128,12 @@ export async function generateReimagine(
 export async function generateSynthesis(
   currentAnalysis: AnalysisOutput,
   query?: string,
+  processFlows?: ProcessFlow[],
 ): Promise<SynthesisOutput> {
   const { data } = await api.post<{ synthesis: SynthesisOutput }>("/api/synthesize", {
     current_analysis: currentAnalysis,
     ...(query?.trim() && { query }),
+    ...(processFlows?.length && { process_flows: processFlows }),
   }, { timeout: 300000 });
   return data.synthesis;
 }
@@ -141,6 +143,19 @@ export async function generateProcessFlows(
 ): Promise<ProcessFlow[]> {
   const { data } = await api.post<{ process_flows: ProcessFlow[] }>("/api/process-flows", {
     current_analysis: currentAnalysis,
+  }, { timeout: 300000 });
+  return data.process_flows;
+}
+
+export async function generateToBeProcessFlows(
+  currentAnalysis: AnalysisOutput,
+  asIsFlows: ProcessFlow[],
+  reimagineData?: ReimagineOutput,
+): Promise<ToBeProcessFlow[]> {
+  const { data } = await api.post<{ process_flows: ToBeProcessFlow[] }>("/api/process-flows/to-be", {
+    current_analysis: currentAnalysis,
+    as_is_flows: asIsFlows,
+    ...(reimagineData && { reimagine_data: reimagineData }),
   }, { timeout: 300000 });
   return data.process_flows;
 }
