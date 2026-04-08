@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlowOutput, ProcessFlow, ToBeProcessFlow
+from .claude_schemas import AnalysisOutput, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlowOutput, ProcessFlow, ToBeProcessFlow, SOPOutput
 
 
 class FileMetadata(BaseModel):
@@ -95,6 +95,15 @@ class ToBeProcessFlowRequest(BaseModel):
 
 class ToBeProcessFlowResponse(BaseModel):
     process_flows: list[ToBeProcessFlow]
+
+
+class SOPRequest(BaseModel):
+    current_analysis: dict
+    process_flows: Optional[list[dict]] = None
+
+
+class SOPResponse(BaseModel):
+    sop: SOPOutput
 
 
 class HealthResponse(BaseModel):

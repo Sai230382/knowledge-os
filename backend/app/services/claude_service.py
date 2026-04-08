@@ -893,3 +893,101 @@ async def generate_synthesis(
     )
 
     return await _call_and_parse(client, SYNTHESIS_SYSTEM_PROMPT, "\n".join(parts), max_tokens=8000)
+
+
+# ─── SOP Generation ─────────────────────────────────────────
+
+SOP_SYSTEM_PROMPT = """You are a Standard Operating Procedure (SOP) Document Specialist. Your job is to transform a comprehensive document analysis into a professional, well-structured SOP document.
+
+You will receive analysis data containing: knowledge graph (entities and relationships), context intelligence (tribal knowledge, exceptions, workarounds), gap analysis, recommendations, and optionally process flow data.
+
+Create a complete SOP document that formalizes the processes, captures tribal knowledge as official procedures, and identifies areas of improvement.
+
+JSON output schema:
+{
+  "document_title": "str - Professional SOP title",
+  "version": "1.0",
+  "effective_date": "str - today's date in YYYY-MM-DD format",
+  "purpose": "str - 2-3 sentences explaining why this SOP exists and what it governs",
+  "scope": "str - 2-3 sentences defining what processes/areas this SOP covers",
+  "roles_responsibilities": [
+    {"role": "str - role title from the analysis", "responsibilities": ["str - specific responsibility"]}
+  ],
+  "sections": [
+    {
+      "section_id": "str - slug like 'loan-origination'",
+      "title": "str - Section title matching a key process",
+      "purpose": "str - Why this section/process matters",
+      "scope": "str - What this section covers",
+      "steps": [
+        {
+          "step_number": 1,
+          "title": "str - Short action title",
+          "description": "str - Detailed step-by-step instructions (2-4 sentences). Be specific about WHAT to do, HOW to do it, and WHEN.",
+          "responsible_role": "str - Who performs this step",
+          "inputs": ["str - What's needed to start this step"],
+          "outputs": ["str - What this step produces"],
+          "tools_systems": ["str - Systems, software, or tools used"],
+          "screenshot_description": "str - Describe what screenshot should show for this step (e.g., 'Screenshot of the loan origination system showing the new application form with all required fields highlighted'). Be specific about the screen, UI elements, and what to capture.",
+          "tips_notes": ["str - Tribal knowledge, warnings, best practices, gotchas from context intelligence"],
+          "related_process_id": "str - process_id from process flows if applicable, empty string if not"
+        }
+      ],
+      "exceptions": ["str - Exception handling notes from context intelligence"]
+    }
+  ],
+  "areas_of_opportunity": [
+    {
+      "title": "str - Clear opportunity title",
+      "description": "str - What the opportunity is",
+      "current_state": "str - How things work today",
+      "improvement": "str - Specific improvement suggestion",
+      "impact": "high|medium|low",
+      "source": "sme_highlight|gap_analysis|pattern|tribal_knowledge"
+    }
+  ],
+  "glossary": [
+    {"term": "str - Technical term or acronym", "definition": "str - Plain-language definition"}
+  ]
+}
+
+RULES:
+- Create 2-6 sections, one per major process identified in the analysis
+- Each section should have 3-10 detailed steps
+- EVERY step MUST have a screenshot_description — describe what the screenshot would show for that step (the system/screen/form/report being used). Be specific and descriptive.
+- Extract tribal knowledge from context_intelligence items and embed them as tips_notes in relevant steps
+- Extract areas of opportunity from: gap_analysis (process/technology gaps), context_intelligence (workarounds that indicate broken processes), and recommendations
+- For areas_of_opportunity source field: use "sme_highlight" for insights from tribal knowledge/exceptions, "gap_analysis" for gaps, "pattern" for industry patterns, "tribal_knowledge" for workarounds
+- roles_responsibilities should cover all distinct roles found in the knowledge graph (person-type entities)
+- glossary should include domain-specific terms, acronyms, and system names
+- If process_flows data is provided, use the process_id values to link steps via related_process_id
+- Write in clear, professional language suitable for an operations manual
+- Be SPECIFIC — reference actual systems, roles, and processes from the analysis data
+- Respond ONLY with valid JSON, no markdown or commentary"""
+
+
+async def generate_sop(
+    current_analysis: dict,
+    process_flows: list[dict] | None = None,
+) -> dict:
+    """Generate a Standard Operating Procedure document from the analysis."""
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=300.0)
+
+    analysis_json = json.dumps(current_analysis, indent=1)
+    if len(analysis_json) > 120000:
+        analysis_json = analysis_json[:120000] + "\n... (truncated)"
+
+    parts = [f"## Full Analysis Data:\n{analysis_json}\n"]
+    if process_flows:
+        pf_json = json.dumps(process_flows, indent=1)
+        if len(pf_json) > 30000:
+            pf_json = pf_json[:30000] + "\n... (truncated)"
+        parts.append(f"\n## Process Flows Extracted:\n{pf_json}\n")
+    parts.append(
+        "\nGenerate a comprehensive Standard Operating Procedure (SOP) document from this analysis. "
+        "Include detailed steps with screenshot descriptions for every step, "
+        "embed tribal knowledge as tips/notes, and identify all areas of opportunity. "
+        "Return the COMPLETE SOP JSON."
+    )
+
+    return await _call_and_parse(client, SOP_SYSTEM_PROMPT, "\n".join(parts), max_tokens=12000)

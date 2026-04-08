@@ -189,3 +189,59 @@ export interface SynthesisOutput {
   quick_wins: string[];
   strategic_recommendations: string[];
 }
+
+
+// --- SOP (Standard Operating Procedure) ---
+
+export interface SOPStep {
+  step_number: number;
+  title: string;
+  description: string;
+  responsible_role: string;
+  inputs: string[];
+  outputs: string[];
+  tools_systems: string[];
+  screenshot_description: string;
+  tips_notes: string[];
+  related_process_id: string;
+}
+
+export interface SOPSection {
+  section_id: string;
+  title: string;
+  purpose: string;
+  scope: string;
+  steps: SOPStep[];
+  exceptions: string[];
+}
+
+export interface SOPOpportunity {
+  title: string;
+  description: string;
+  current_state: string;
+  improvement: string;
+  impact: "high" | "medium" | "low";
+  source: string;
+}
+
+export interface SOPRoleResponsibility {
+  role: string;
+  responsibilities: string[];
+}
+
+export interface SOPGlossaryItem {
+  term: string;
+  definition: string;
+}
+
+export interface SOPOutput {
+  document_title: string;
+  version: string;
+  effective_date: string;
+  purpose: string;
+  scope: string;
+  roles_responsibilities: SOPRoleResponsibility[];
+  sections: SOPSection[];
+  areas_of_opportunity: SOPOpportunity[];
+  glossary: SOPGlossaryItem[];
+}

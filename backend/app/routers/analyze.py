@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.processors.processor_factory import get_processor, SUPPORTED_EXTENSIONS
-from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis, generate_process_flows, generate_tobe_process_flows
+from app.services.claude_service import refine_analysis, accumulate_analysis, generate_benchmarks, generate_reimagine, generate_synthesis, generate_process_flows, generate_tobe_process_flows, generate_sop
 from app.services.url_service import download_file
 from app.services.job_service import create_and_run_job
 from app.schemas.responses import (
@@ -13,8 +13,9 @@ from app.schemas.responses import (
     SynthesisRequest, SynthesisResponse,
     ProcessFlowRequest, ProcessFlowResponse,
     ToBeProcessFlowRequest, ToBeProcessFlowResponse,
+    SOPRequest, SOPResponse,
 )
-from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow, ToBeProcessFlow
+from app.schemas.claude_schemas import BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow, ToBeProcessFlow, SOPOutput
 
 router = APIRouter()
 
@@ -236,3 +237,17 @@ async def synthesize(request: SynthesisRequest):
     except Exception as e:
         raise HTTPException(500, f"Failed to generate synthesis: {str(e)}")
     return SynthesisResponse(synthesis=synthesis_output)
+
+
+@router.post("/api/sop", response_model=SOPResponse)
+async def sop(request: SOPRequest):
+    """Generate a Standard Operating Procedure document from the analysis."""
+    try:
+        data = await generate_sop(
+            request.current_analysis,
+            request.process_flows,
+        )
+        sop_output = SOPOutput(**data)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate SOP: {str(e)}")
+    return SOPResponse(sop=sop_output)

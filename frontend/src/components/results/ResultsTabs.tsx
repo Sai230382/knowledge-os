@@ -8,12 +8,13 @@ import BenchmarkTab from "./BenchmarkTab";
 import ReimagineTab from "./ReimagineTab";
 import SynthesisTab from "./SynthesisTab";
 import ProcessFlowTab from "./ProcessFlowTab";
+import SOPTab from "./SOPTab";
 
 interface ResultsTabsProps {
   analysis: AnalysisOutput;
 }
 
-type Tab = "synthesis" | "patterns" | "insights" | "knowledge" | "context" | "process-flow" | "benchmarks" | "reimagine";
+type Tab = "synthesis" | "patterns" | "insights" | "knowledge" | "context" | "process-flow" | "sop" | "benchmarks" | "reimagine";
 
 const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
   synthesis: {
@@ -40,6 +41,10 @@ const TAB_INFO: Record<Tab, { icon: string; description: string }> = {
     icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7",
     description: "Process Flow — visual flowcharts of key processes with side-by-side As-Is vs AI-powered To-Be comparison. Download as HTML to share.",
   },
+  sop: {
+    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+    description: "Standard Operating Procedure — professional SOP with step-by-step procedures, screenshot placeholders, tribal knowledge tips, and areas of opportunity. Download as Word (.docx).",
+  },
   benchmarks: {
     icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
     description: "Industry benchmarks — compare your current processes against best-in-class practices. Get maturity scores and identify priority improvement areas.",
@@ -57,6 +62,7 @@ const FS_LABELS: Record<Tab, { title: string; desc: string }> = {
   knowledge: { title: "Knowledge Graph", desc: "Formal entity map — official relationships and documented connections" },
   context: { title: "Context Graph", desc: "Hidden intelligence layer — tribal knowledge, exceptions, and undocumented dependencies" },
   "process-flow": { title: "Process Flow", desc: "Visual flowcharts of key processes — steps, decision points, and exception paths" },
+  sop: { title: "Standard Operating Procedure", desc: "Professional SOP with procedures, screenshot placeholders, and areas of opportunity" },
   benchmarks: { title: "Industry Benchmarks", desc: "Compare your processes against best-in-class practices" },
   reimagine: { title: "Reimagine Lab", desc: "AI transformation scenarios for your current processes" },
 };
@@ -76,6 +82,7 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
     { id: "knowledge", label: "Knowledge Graph" },
     { id: "context", label: "Context Graph" },
     { id: "process-flow", label: "Process Flow" },
+    { id: "sop", label: "SOP" },
     { id: "benchmarks", label: "Benchmarks" },
     { id: "reimagine", label: "Reimagine" },
   ];
@@ -125,6 +132,11 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
           )}
           {fullscreenTab === "process-flow" && (
             <ProcessFlowTab analysis={analysis} fullscreen onToggleFullscreen={() => setFullscreenTab(null)} />
+          )}
+          {fullscreenTab === "sop" && (
+            <div className="h-full overflow-auto p-4">
+              <SOPTab analysis={analysis} />
+            </div>
           )}
           {fullscreenTab === "benchmarks" && (
             <div className="h-full overflow-auto p-4">
@@ -261,6 +273,12 @@ export default function ResultsTabs({ analysis }: ResultsTabsProps) {
             analysis={analysis}
             onToggleFullscreen={() => setFullscreenTab("process-flow")}
           />
+        </div>
+      )}
+
+      {activeTab === "sop" && (
+        <div className="flex-1 overflow-auto p-4">
+          <SOPTab analysis={analysis} />
         </div>
       )}
 

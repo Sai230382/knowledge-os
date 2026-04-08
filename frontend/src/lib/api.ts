@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow, ToBeProcessFlow } from "./types";
+import { AnalysisOutput, AnalysisResponse, Project, BenchmarkOutput, ReimagineOutput, SynthesisOutput, ProcessFlow, ToBeProcessFlow, SOPOutput } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
@@ -158,6 +158,17 @@ export async function generateToBeProcessFlows(
     ...(reimagineData && { reimagine_data: reimagineData }),
   }, { timeout: 300000 });
   return data.process_flows;
+}
+
+export async function generateSOP(
+  currentAnalysis: AnalysisOutput,
+  processFlows?: ProcessFlow[],
+): Promise<SOPOutput> {
+  const { data } = await api.post<{ sop: SOPOutput }>("/api/sop", {
+    current_analysis: currentAnalysis,
+    ...(processFlows?.length && { process_flows: processFlows }),
+  }, { timeout: 300000 });
+  return data.sop;
 }
 
 export async function healthCheck(): Promise<boolean> {

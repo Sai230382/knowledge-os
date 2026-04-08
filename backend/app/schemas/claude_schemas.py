@@ -183,3 +183,58 @@ class SynthesisOutput(BaseModel):
     key_risks: list[str] = []
     quick_wins: list[str] = []
     strategic_recommendations: list[str] = []
+
+
+# --- SOP (Standard Operating Procedure) ---
+
+class SOPStep(BaseModel):
+    step_number: int = 0
+    title: str = ""
+    description: str = ""
+    responsible_role: str = ""
+    inputs: list[str] = []
+    outputs: list[str] = []
+    tools_systems: list[str] = []
+    screenshot_description: str = ""  # Describes what screenshot should show
+    tips_notes: list[str] = []  # Tribal knowledge, warnings, best practices
+    related_process_id: str = ""  # Links to ProcessFlow for diagram
+
+
+class SOPSection(BaseModel):
+    section_id: str = ""
+    title: str = ""
+    purpose: str = ""
+    scope: str = ""
+    steps: list[SOPStep] = []
+    exceptions: list[str] = []
+
+
+class SOPOpportunity(BaseModel):
+    title: str = ""
+    description: str = ""
+    current_state: str = ""
+    improvement: str = ""
+    impact: str = "medium"  # high, medium, low
+    source: str = ""  # sme_highlight, gap_analysis, pattern, tribal_knowledge
+
+
+class SOPRoleResponsibility(BaseModel):
+    role: str = ""
+    responsibilities: list[str] = []
+
+
+class SOPGlossaryItem(BaseModel):
+    term: str = ""
+    definition: str = ""
+
+
+class SOPOutput(BaseModel):
+    document_title: str = ""
+    version: str = "1.0"
+    effective_date: str = ""
+    purpose: str = ""
+    scope: str = ""
+    roles_responsibilities: list[SOPRoleResponsibility] = []
+    sections: list[SOPSection] = []
+    areas_of_opportunity: list[SOPOpportunity] = []
+    glossary: list[SOPGlossaryItem] = []
