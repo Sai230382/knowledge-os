@@ -897,45 +897,62 @@ async def generate_synthesis(
 
 # ─── SOP Generation ─────────────────────────────────────────
 
-SOP_SYSTEM_PROMPT = """You are a Standard Operating Procedure (SOP) Document Specialist. Your job is to transform a comprehensive document analysis into a professional, well-structured SOP document.
+SOP_SYSTEM_PROMPT = """You are a Standard Operating Procedure (SOP) Document Specialist. Transform analysis data into a professional SOP following the corporate VM SOP template format.
 
-You will receive analysis data containing: knowledge graph (entities and relationships), context intelligence (tribal knowledge, exceptions, workarounds), gap analysis, recommendations, and optionally process flow data.
+You will receive analysis data containing: knowledge graph, context intelligence (tribal knowledge, exceptions, workarounds), gap analysis, recommendations, and optionally process flow data.
 
-Create a complete SOP document that formalizes the processes, captures tribal knowledge as official procedures, and identifies areas of improvement.
-
-JSON output schema:
+JSON output schema — follow this EXACTLY:
 {
-  "document_title": "str - Professional SOP title",
+  "sop_title": "str - Professional SOP title (e.g., 'Transaction Dispute Processing')",
+  "sop_number": "str - SOP reference number (e.g., 'SOP-OPS-001')",
+  "sop_owner": "str - Role that owns this SOP (e.g., 'Operations Manager')",
+  "last_attestation_date": "str - today's date as dd/mm/yyyy",
+  "creation_date": "str - today's date as dd/mm/yyyy",
+  "document_author": "str - 'Contextus Knowledge OS'",
+  "approved_by": "str - '<Pending Approval>'",
   "version": "1.0",
-  "effective_date": "str - today's date in YYYY-MM-DD format",
-  "purpose": "str - 2-3 sentences explaining why this SOP exists and what it governs",
-  "scope": "str - 2-3 sentences defining what processes/areas this SOP covers",
-  "roles_responsibilities": [
-    {"role": "str - role title from the analysis", "responsibilities": ["str - specific responsibility"]}
+
+  "purpose_and_scope": "str - 2-4 sentences explaining what this SOP covers and why it exists",
+
+  "acronyms": [
+    {"abbreviation": "str", "long_form": "str"}
   ],
-  "sections": [
+
+  "systems_used": ["str - System/tool names used in this process group"],
+
+  "process_map_description": "str - 2-3 sentences describing the high-level process flow. Reference the key phases and decision points.",
+
+  "roles_responsibilities": [
+    {"role": "str - role title", "responsibility": "str - what they do in this process"}
+  ],
+
+  "process_narrative_intro": "str - 1-2 sentences describing the overall process outcome (e.g., 'This SOP demonstrates the outcome of a loan origination request coming from the borrower via the portal.')",
+
+  "upstream_dependencies": ["str - upstream process or input that feeds into this SOP"],
+  "downstream_dependencies": ["str - downstream process or output that this SOP feeds"],
+
+  "phases": [
     {
-      "section_id": "str - slug like 'loan-origination'",
-      "title": "str - Section title matching a key process",
-      "purpose": "str - Why this section/process matters",
-      "scope": "str - What this section covers",
-      "steps": [
+      "phase_number": 1,
+      "title": "str - Phase title matching process map (e.g., 'Application Receipt & Validation')",
+      "description": "str - 2-3 sentences describing this phase",
+      "role_performed_by": "str - Role that performs this phase",
+      "sub_steps": [
         {
-          "step_number": 1,
-          "title": "str - Short action title",
-          "description": "str - Detailed step-by-step instructions (2-4 sentences). Be specific about WHAT to do, HOW to do it, and WHEN.",
-          "responsible_role": "str - Who performs this step",
-          "inputs": ["str - What's needed to start this step"],
-          "outputs": ["str - What this step produces"],
-          "tools_systems": ["str - Systems, software, or tools used"],
-          "screenshot_description": "str - Describe what screenshot should show for this step (e.g., 'Screenshot of the loan origination system showing the new application form with all required fields highlighted'). Be specific about the screen, UI elements, and what to capture.",
-          "tips_notes": ["str - Tribal knowledge, warnings, best practices, gotchas from context intelligence"],
-          "related_process_id": "str - process_id from process flows if applicable, empty string if not"
+          "step_number": "1.1",
+          "title": "str - Sub-step title",
+          "description": "str - Detailed step instructions (2-4 sentences). Be specific about WHAT, HOW, and WHEN.",
+          "screenshot_description": "str - Describe what screenshot should show (e.g., 'Screenshot of the CRM system showing the new dispute form with Customer ID, Transaction Date, and Amount fields highlighted'). Be specific about the screen, UI elements, and what to capture.",
+          "tips_notes": ["str - Tribal knowledge, warnings, best practices from context intelligence"]
         }
-      ],
-      "exceptions": ["str - Exception handling notes from context intelligence"]
+      ]
     }
   ],
+
+  "related_documents": [
+    {"title": "str - Document name/ID", "used_for": "str - Purpose", "link_path": "str - File path or link placeholder"}
+  ],
+
   "areas_of_opportunity": [
     {
       "title": "str - Clear opportunity title",
@@ -946,22 +963,26 @@ JSON output schema:
       "source": "sme_highlight|gap_analysis|pattern|tribal_knowledge"
     }
   ],
-  "glossary": [
-    {"term": "str - Technical term or acronym", "definition": "str - Plain-language definition"}
+
+  "appendix_items": [
+    {"title": "str - e.g., 'Appendix A - Exception Handling Matrix'", "content": "str - Content or placeholder"}
   ]
 }
 
 RULES:
-- Create 2-6 sections, one per major process identified in the analysis
-- Each section should have 3-10 detailed steps
-- EVERY step MUST have a screenshot_description — describe what the screenshot would show for that step (the system/screen/form/report being used). Be specific and descriptive.
-- Extract tribal knowledge from context_intelligence items and embed them as tips_notes in relevant steps
-- Extract areas of opportunity from: gap_analysis (process/technology gaps), context_intelligence (workarounds that indicate broken processes), and recommendations
-- For areas_of_opportunity source field: use "sme_highlight" for insights from tribal knowledge/exceptions, "gap_analysis" for gaps, "pattern" for industry patterns, "tribal_knowledge" for workarounds
-- roles_responsibilities should cover all distinct roles found in the knowledge graph (person-type entities)
-- glossary should include domain-specific terms, acronyms, and system names
-- If process_flows data is provided, use the process_id values to link steps via related_process_id
-- Write in clear, professional language suitable for an operations manual
+- Create 2-6 phases in the Process Narrative, each representing a major stage of the process
+- Each phase should have 2-6 sub_steps with detailed instructions
+- EVERY sub_step MUST have a screenshot_description — describe what screenshot would show. Be specific about the system screen, form fields, buttons, and UI elements visible.
+- Extract tribal knowledge from context_intelligence and embed as tips_notes in relevant sub_steps
+- Extract areas_of_opportunity from: gap_analysis, context_intelligence (workarounds), and recommendations
+- For source field: "sme_highlight" for tribal knowledge/exceptions, "gap_analysis" for gaps, "pattern" for industry patterns, "tribal_knowledge" for workarounds
+- roles_responsibilities: one entry per distinct role, with a single responsibility string
+- acronyms: include all domain terms, system abbreviations, and technical acronyms
+- systems_used: list all technology/system names from the knowledge graph
+- related_documents: extract any referenced documents, policies, templates, or reports
+- upstream/downstream: identify process dependencies from the knowledge graph edges
+- appendix_items: include exception handling matrices, decision trees, or reference tables
+- Write in clear, professional operations manual language
 - Be SPECIFIC — reference actual systems, roles, and processes from the analysis data
 - Respond ONLY with valid JSON, no markdown or commentary"""
 
@@ -984,9 +1005,9 @@ async def generate_sop(
             pf_json = pf_json[:30000] + "\n... (truncated)"
         parts.append(f"\n## Process Flows Extracted:\n{pf_json}\n")
     parts.append(
-        "\nGenerate a comprehensive Standard Operating Procedure (SOP) document from this analysis. "
-        "Include detailed steps with screenshot descriptions for every step, "
-        "embed tribal knowledge as tips/notes, and identify all areas of opportunity. "
+        "\nGenerate a comprehensive Standard Operating Procedure (SOP) following the corporate VM template format. "
+        "Include phases with sub-steps, screenshot descriptions, tribal knowledge tips, "
+        "upstream/downstream dependencies, related documents, and areas of opportunity. "
         "Return the COMPLETE SOP JSON."
     )
 

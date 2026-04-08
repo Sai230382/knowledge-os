@@ -186,27 +186,38 @@ class SynthesisOutput(BaseModel):
 
 
 # --- SOP (Standard Operating Procedure) ---
+# Matches the corporate VM SOP template format
 
-class SOPStep(BaseModel):
-    step_number: int = 0
+class SOPSubStep(BaseModel):
+    step_number: str = ""        # "1.1", "1.2", "2.1" etc.
     title: str = ""
     description: str = ""
-    responsible_role: str = ""
-    inputs: list[str] = []
-    outputs: list[str] = []
-    tools_systems: list[str] = []
-    screenshot_description: str = ""  # Describes what screenshot should show
-    tips_notes: list[str] = []  # Tribal knowledge, warnings, best practices
-    related_process_id: str = ""  # Links to ProcessFlow for diagram
+    screenshot_description: str = ""   # Describes what screenshot should show
+    tips_notes: list[str] = []         # Tribal knowledge, warnings
 
 
-class SOPSection(BaseModel):
-    section_id: str = ""
+class SOPPhase(BaseModel):
+    phase_number: int = 0
+    title: str = ""                    # Phase title matching process map
+    description: str = ""
+    role_performed_by: str = ""
+    sub_steps: list[SOPSubStep] = []
+
+
+class SOPAcronym(BaseModel):
+    abbreviation: str = ""
+    long_form: str = ""
+
+
+class SOPRoleResponsibility(BaseModel):
+    role: str = ""
+    responsibility: str = ""
+
+
+class SOPRelatedDocument(BaseModel):
     title: str = ""
-    purpose: str = ""
-    scope: str = ""
-    steps: list[SOPStep] = []
-    exceptions: list[str] = []
+    used_for: str = ""
+    link_path: str = ""
 
 
 class SOPOpportunity(BaseModel):
@@ -214,27 +225,48 @@ class SOPOpportunity(BaseModel):
     description: str = ""
     current_state: str = ""
     improvement: str = ""
-    impact: str = "medium"  # high, medium, low
-    source: str = ""  # sme_highlight, gap_analysis, pattern, tribal_knowledge
+    impact: str = "medium"             # high, medium, low
+    source: str = ""                   # sme_highlight, gap_analysis, pattern, tribal_knowledge
 
 
-class SOPRoleResponsibility(BaseModel):
-    role: str = ""
-    responsibilities: list[str] = []
-
-
-class SOPGlossaryItem(BaseModel):
-    term: str = ""
-    definition: str = ""
+class SOPAppendixItem(BaseModel):
+    title: str = ""                    # "Appendix A", "Appendix B"
+    content: str = ""
 
 
 class SOPOutput(BaseModel):
-    document_title: str = ""
+    # Cover page
+    sop_title: str = ""
+    sop_number: str = ""
+    sop_owner: str = ""
+    last_attestation_date: str = ""
+
+    # Document history
+    creation_date: str = ""
+    document_author: str = ""
+    approved_by: str = ""
     version: str = "1.0"
-    effective_date: str = ""
-    purpose: str = ""
-    scope: str = ""
+
+    # Overview
+    purpose_and_scope: str = ""
+    acronyms: list[SOPAcronym] = []
+    systems_used: list[str] = []
+    process_map_description: str = ""  # Description of the process map/flowchart
+
+    # Roles & Responsibilities
     roles_responsibilities: list[SOPRoleResponsibility] = []
-    sections: list[SOPSection] = []
+
+    # Process Narrative
+    process_narrative_intro: str = ""
+    upstream_dependencies: list[str] = []
+    downstream_dependencies: list[str] = []
+    phases: list[SOPPhase] = []
+
+    # Related Documents
+    related_documents: list[SOPRelatedDocument] = []
+
+    # Areas of Opportunity (added value from Contextus)
     areas_of_opportunity: list[SOPOpportunity] = []
-    glossary: list[SOPGlossaryItem] = []
+
+    # Appendix
+    appendix_items: list[SOPAppendixItem] = []

@@ -191,28 +191,38 @@ export interface SynthesisOutput {
 }
 
 
-// --- SOP (Standard Operating Procedure) ---
+// --- SOP (Standard Operating Procedure) — VM Template Format ---
 
-export interface SOPStep {
-  step_number: number;
+export interface SOPSubStep {
+  step_number: string;         // "1.1", "1.2", "2.1"
   title: string;
   description: string;
-  responsible_role: string;
-  inputs: string[];
-  outputs: string[];
-  tools_systems: string[];
   screenshot_description: string;
   tips_notes: string[];
-  related_process_id: string;
 }
 
-export interface SOPSection {
-  section_id: string;
+export interface SOPPhase {
+  phase_number: number;
   title: string;
-  purpose: string;
-  scope: string;
-  steps: SOPStep[];
-  exceptions: string[];
+  description: string;
+  role_performed_by: string;
+  sub_steps: SOPSubStep[];
+}
+
+export interface SOPAcronym {
+  abbreviation: string;
+  long_form: string;
+}
+
+export interface SOPRoleResponsibility {
+  role: string;
+  responsibility: string;
+}
+
+export interface SOPRelatedDocument {
+  title: string;
+  used_for: string;
+  link_path: string;
 }
 
 export interface SOPOpportunity {
@@ -224,24 +234,38 @@ export interface SOPOpportunity {
   source: string;
 }
 
-export interface SOPRoleResponsibility {
-  role: string;
-  responsibilities: string[];
-}
-
-export interface SOPGlossaryItem {
-  term: string;
-  definition: string;
+export interface SOPAppendixItem {
+  title: string;
+  content: string;
 }
 
 export interface SOPOutput {
-  document_title: string;
+  // Cover page
+  sop_title: string;
+  sop_number: string;
+  sop_owner: string;
+  last_attestation_date: string;
+  // Document history
+  creation_date: string;
+  document_author: string;
+  approved_by: string;
   version: string;
-  effective_date: string;
-  purpose: string;
-  scope: string;
+  // Overview
+  purpose_and_scope: string;
+  acronyms: SOPAcronym[];
+  systems_used: string[];
+  process_map_description: string;
+  // Roles
   roles_responsibilities: SOPRoleResponsibility[];
-  sections: SOPSection[];
+  // Process Narrative
+  process_narrative_intro: string;
+  upstream_dependencies: string[];
+  downstream_dependencies: string[];
+  phases: SOPPhase[];
+  // Related Documents
+  related_documents: SOPRelatedDocument[];
+  // Areas of Opportunity
   areas_of_opportunity: SOPOpportunity[];
-  glossary: SOPGlossaryItem[];
+  // Appendix
+  appendix_items: SOPAppendixItem[];
 }
