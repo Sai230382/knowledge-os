@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { AnalysisOutput, SOPOutput, ProcessFlow } from "@/lib/types";
-import { generateSOP, generateProcessFlows } from "@/lib/api";
+import { AnalysisOutput, SOPOutput } from "@/lib/types";
+import { generateSOP } from "@/lib/api";
 import dynamic from "next/dynamic";
 
 const SOPDocxDownload = dynamic(() => import("@/components/sop/SOPDocxDownload"), {
@@ -40,13 +40,10 @@ export default function SOPTab({ analysis }: SOPTabProps) {
     setIsLoading(true);
     setError("");
     try {
-      let processFlows: ProcessFlow[] | undefined;
-      try {
-        processFlows = await generateProcessFlows(analysis);
-      } catch {
-        // Process flows are optional
-      }
-      const result = await generateSOP(analysis, processFlows);
+      // Skip the separate process flows call — the analysis already has
+      // enough data and the SOP prompt extracts processes directly.
+      // This cuts generation time in half.
+      const result = await generateSOP(analysis);
       setSop(result);
       // Expand all phases by default
       const allPhases = new Set(result.phases.map((p) => p.phase_number));
