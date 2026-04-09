@@ -196,3 +196,47 @@ async def delete_project(
     await session.commit()
 
     return {"ok": True}
+
+
+# --- Admin / Debug ---
+
+@router.get("/api/debug/workspaces")
+async def debug_workspaces(session: AsyncSession = Depends(get_session)):
+    """List all workspaces with their project names (for recovery)."""
+    result = await session.execute(select(Workspace))
+    workspaces = result.scalars().all()
+
+    out = []
+    for ws in workspaces:
+        proj_result = await session.execute(
+            select(ProjectModel)
+            .where(ProjectModel.workspace_id == ws.id)
+            .order_by(ProjectModel.created_at)
+        )
+        projects = proj_result.scalars().all()
+        out.append({
+            "workspace_id": ws.id,
+            "created_at": str(ws.created_at),
+            "projects": [{"name": p.name, "has_data": p.result_data is not None} for p in projects],
+        })
+    return out
+
+
+class ResetPassphraseRequest(BaseModel):
+    workspace_id: str
+    new_passphrase: str
+
+
+@router.post("/api/debug/reset-passphrase")
+async def reset_passphrase(req: ResetPassphraseRequest, session: AsyncSession = Depends(get_session)):
+    """Reset passphrase for a workspace (admin recovery)."""
+    result = await session.execute(
+        select(Workspace).where(Workspace.id == req.workspace_id)
+    )
+    workspace = result.scalar_one_or_none()
+    if not workspace:
+        raise HTTPException(404, "Workspace not found")
+
+    workspace.passphrase_hash = hash_passphrase(req.new_passphrase)
+    await session.commit()
+    return {"ok": True, "message": f"Passphrase reset. Use '{req.new_passphrase}' to log in."}
